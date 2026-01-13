@@ -1,12 +1,15 @@
 """Core business logic and domain models."""
 
 from src.core.exceptions import AnkiConnectError, APIError
+from src.core.import_cache import ImportCache, import_cache
 from src.core.models import CardData, SyncResult, SyncStatus
 
 __all__ = [
     "AnkiConnectError",
     "APIError",
     "CardData",
+    "ImportCache",
+    "import_cache",
     "SyncResult",
     "SyncStatus",
 ]

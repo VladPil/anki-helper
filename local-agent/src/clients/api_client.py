@@ -110,16 +110,17 @@ class BackendAPIClient:
             True if token is valid, False otherwise.
         """
         try:
-            self._request("GET", "/api/auth/verify")
+            # Use decks endpoint to verify connection and auth
+            self._request("GET", "/api/decks")
             return True
         except APIError as e:
-            if e.status_code in (401, 403):
+            if e.status_code in (401, 403, 404):
                 return False
             raise
 
     def get_user_info(self) -> dict[str, Any]:
         """Get current user information."""
-        return self._request("GET", "/api/auth/me")
+        return self._request("GET", "/api/users/me")
 
     def get_approved_cards(
         self,
@@ -141,8 +142,8 @@ class BackendAPIClient:
         if since:
             params["since"] = since.isoformat()
 
-        response = self._request("GET", "/api/cards/approved", params=params)
-        return [CardData(**card) for card in response.get("cards", [])]
+        response = self._request("GET", "/api/cards", params={**params, "status": "approved"})
+        return [CardData(**card) for card in response.get("items", [])]
 
     def get_pending_cards(
         self,
@@ -158,9 +159,9 @@ class BackendAPIClient:
         Returns:
             List of pending cards.
         """
-        params: dict[str, Any] = {"limit": limit, "offset": offset}
-        response = self._request("GET", "/api/cards/pending", params=params)
-        return [CardData(**card) for card in response.get("cards", [])]
+        params: dict[str, Any] = {"limit": limit, "offset": offset, "status": "draft"}
+        response = self._request("GET", "/api/cards", params=params)
+        return [CardData(**card) for card in response.get("items", [])]
 
     def get_card(self, card_id: str) -> CardData:
         """Get a specific card by ID.
@@ -197,7 +198,7 @@ class BackendAPIClient:
         if error_message:
             data["error_message"] = error_message
 
-        self._request("POST", f"/api/cards/{card_id}/sync-status", data=data)
+        self._request("PATCH", f"/api/cards/{card_id}", data=data)
 
     def bulk_update_sync_status(self, statuses: list[SyncStatus]) -> None:
         """Bulk update sync statuses for multiple cards.
@@ -205,8 +206,9 @@ class BackendAPIClient:
         Args:
             statuses: List of sync status updates.
         """
-        data = {"statuses": [s.model_dump() for s in statuses]}
-        self._request("POST", "/api/cards/sync-status/bulk", data=data)
+        # TODO: Implement bulk update endpoint in backend
+        for s in statuses:
+            self._request("PATCH", f"/api/cards/{s.card_id}", data=s.model_dump())
 
     def get_sync_history(self, limit: int = 50) -> list[dict[str, Any]]:
         """Get recent sync history.
@@ -241,7 +243,68 @@ class BackendAPIClient:
 
     def get_decks(self) -> list[dict[str, Any]]:
         """Get user's configured decks."""
-        return self._request("GET", "/api/decks")
+        response = self._request("GET", "/api/decks")
+        # Handle paginated response
+        if isinstance(response, dict) and "items" in response:
+            return response["items"]
+        return response if isinstance(response, list) else []
+
+    def import_deck(
+        self,
+        name: str,
+        description: str = "",
+        tags: Optional[list[str]] = None,
+    ) -> dict[str, Any]:
+        """Import/create a deck in AnkiRAG.
+
+        Args:
+            name: Deck name.
+            description: Deck description.
+            tags: Optional tags for the deck.
+
+        Returns:
+            Created deck data.
+        """
+        data = {
+            "name": name,
+            "description": description or f"Imported from Anki: {name}",
+        }
+        return self._request("POST", "/api/decks", data=data)
+
+    def import_cards(
+        self,
+        deck_name: str,
+        cards: list[dict[str, Any]],
+        mark_as_synced: bool = True,
+    ) -> dict[str, Any]:
+        """Import cards to AnkiRAG.
+
+        Args:
+            deck_name: Target deck name (will be created if not exists).
+            cards: List of card data with front, back, tags, anki_note_id.
+            mark_as_synced: Mark imported cards as synced.
+
+        Returns:
+            Import result with created cards and errors.
+        """
+        data = {
+            "deck_name": deck_name,
+            "cards": [
+                {
+                    "front": card["front"],
+                    "back": card["back"],
+                    "tags": card.get("tags", []),
+                    "anki_note_id": card.get("anki_note_id"),
+                }
+                for card in cards
+            ],
+            "mark_as_synced": mark_as_synced,
+        }
+        return self._request("POST", "/api/sync/import/cards", data=data)
+
+    def get_import_status(self) -> dict[str, Any]:
+        """Get current import status/progress."""
+        return self._request("GET", "/api/sync/import/status")
 
     def get_settings(self) -> dict[str, Any]:
         """Get user's sync settings from backend."""

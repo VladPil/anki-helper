@@ -28,7 +28,7 @@ from src.config import settings, token_manager
 from src.core import SyncResult
 from src.core.sync_service import SyncService
 from src.ui.dialogs import LoginDialog, SettingsDialog
-from src.ui.workers import SyncWorker
+from src.ui.workers import ImportResult, ImportWorker, SyncWorker
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(500, 400)
 
         self._sync_worker: Optional[SyncWorker] = None
+        self._import_worker: Optional[ImportWorker] = None
         self._auto_sync_timer: Optional[QTimer] = None
 
         self._setup_ui()
@@ -95,6 +96,10 @@ class MainWindow(QMainWindow):
         self._sync_button = QPushButton("Sync Now")
         self._sync_button.clicked.connect(self._on_sync)
         button_layout.addWidget(self._sync_button)
+
+        self._import_button = QPushButton("Import from Anki")
+        self._import_button.clicked.connect(self._on_import_from_anki)
+        button_layout.addWidget(self._import_button)
 
         self._refresh_button = QPushButton("Refresh Status")
         self._refresh_button.clicked.connect(self._update_status)
@@ -359,24 +364,156 @@ class MainWindow(QMainWindow):
         self.activateWindow()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Handle window close - minimize to tray instead."""
-        if self._tray_icon.isVisible():
-            self.hide()
-            self._tray_icon.showMessage(
-                "AnkiRAG Agent",
-                "Application minimized to tray. Double-click to open.",
-                QSystemTrayIcon.MessageIcon.Information,
-                2000,
+        """Handle window close - quit application."""
+        self._quit_app()
+        event.accept()
+
+    def _on_import_from_anki(self) -> None:
+        """Import decks and cards from Anki to AnkiRAG."""
+        if not token_manager.has_token():
+            QMessageBox.warning(
+                self,
+                "Not Logged In",
+                "Please login before importing.",
             )
-            event.ignore()
+            return
+
+        if self._import_worker and self._import_worker.isRunning():
+            self._log("Import already in progress")
+            return
+
+        logger.info("Starting import from Anki")
+        self._log("Starting import from Anki...")
+
+        # Disable buttons
+        self._import_button.setEnabled(False)
+        self._sync_button.setEnabled(False)
+
+        # Setup progress bar
+        self._progress_bar.setRange(0, 100)
+        self._progress_bar.setValue(0)
+        self._progress_bar.show()
+        self._progress_label.setText("Connecting to Anki...")
+
+        # Create and start worker
+        self._import_worker = ImportWorker(
+            anki_url=settings.anki_connect_url,
+            api_url=settings.api_base_url,
+            token=token_manager.get_token(),
+            batch_size=settings.api_batch_size,
+            timeout=settings.import_timeout,
+        )
+
+        self._import_worker.progress.connect(self._on_import_progress)
+        self._import_worker.deck_progress.connect(self._on_import_deck_progress)
+        self._import_worker.finished.connect(self._on_import_finished)
+        self._import_worker.error.connect(self._on_import_error)
+
+        self._import_worker.start()
+
+    def _on_import_progress(self, message: str, current: int, total: int) -> None:
+        """Handle import progress update.
+
+        Args:
+            message: Progress message.
+            current: Current progress value.
+            total: Total progress value.
+        """
+        self._progress_label.setText(message)
+        if total > 0:
+            self._progress_bar.setValue(current)
+        logger.debug(f"Import progress: {message} ({current}/{total})")
+
+    def _on_import_deck_progress(self, deck_name: str, card_count: int) -> None:
+        """Handle deck progress update.
+
+        Args:
+            deck_name: Name of current deck.
+            card_count: Number of cards in deck.
+        """
+        self._log(f"Importing deck '{deck_name}' ({card_count} cards)...")
+        logger.info(f"Importing deck: {deck_name} ({card_count} cards)")
+
+    def _on_import_finished(self, result: ImportResult) -> None:
+        """Handle import completion.
+
+        Args:
+            result: Import result with statistics.
+        """
+        self._import_button.setEnabled(True)
+        self._sync_button.setEnabled(True)
+        self._progress_bar.hide()
+        self._progress_label.setText("")
+
+        summary = (
+            f"Import completed:\n"
+            f"  - Imported: {result.imported_cards}\n"
+            f"  - Skipped (duplicates): {result.skipped_cards}\n"
+            f"  - Skipped (cached): {result.cached_skipped}\n"
+            f"  - Failed: {result.failed_cards}"
+        )
+        self._log(summary)
+        logger.info(summary.replace("\n", " | "))
+
+        if result.errors:
+            error_msg = "\n".join(result.errors[:5])
+            if len(result.errors) > 5:
+                error_msg += f"\n... and {len(result.errors) - 5} more errors"
+            QMessageBox.warning(
+                self,
+                "Import Completed with Errors",
+                f"Imported: {result.imported_cards}\n"
+                f"Skipped: {result.skipped_cards + result.cached_skipped}\n"
+                f"Failed: {result.failed_cards}\n\n"
+                f"Errors:\n{error_msg}",
+            )
         else:
-            event.accept()
+            total_skipped = result.skipped_cards + result.cached_skipped
+            self._tray_icon.showMessage(
+                "Import Complete",
+                f"Imported {result.imported_cards} cards, skipped {total_skipped}",
+                QSystemTrayIcon.MessageIcon.Information,
+                3000,
+            )
+
+    def _on_import_error(self, error: str) -> None:
+        """Handle import error.
+
+        Args:
+            error: Error message.
+        """
+        self._import_button.setEnabled(True)
+        self._sync_button.setEnabled(True)
+        self._progress_bar.hide()
+        self._progress_label.setText("")
+
+        self._log(f"Import error: {error}")
+        logger.error(f"Import failed: {error}")
+        QMessageBox.critical(self, "Import Failed", f"Import failed: {error}")
 
     def _quit_app(self) -> None:
         """Quit the application."""
-        if self._sync_worker and self._sync_worker.isRunning():
-            self._sync_worker.quit()
-            self._sync_worker.wait()
+        logger.info("Shutting down application...")
 
-        self._tray_icon.hide()
+        # Stop auto-sync timer
+        if self._auto_sync_timer:
+            self._auto_sync_timer.stop()
+
+        # Stop sync worker
+        if self._sync_worker and self._sync_worker.isRunning():
+            logger.info("Stopping sync worker...")
+            self._sync_worker.quit()
+            self._sync_worker.wait(3000)
+
+        # Stop import worker
+        if self._import_worker and self._import_worker.isRunning():
+            logger.info("Stopping import worker...")
+            self._import_worker.cancel()
+            self._import_worker.wait(3000)
+
+        # Hide tray icon
+        if self._tray_icon:
+            self._tray_icon.hide()
+
+        logger.info("Application shutdown complete")
         QApplication.quit()

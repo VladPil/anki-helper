@@ -1,14 +1,20 @@
 """Application settings with environment variable support."""
 
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Find .env in project root (2 levels up from this file)
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables.
 
     Settings can be overridden via environment variables with ANKIRAG_ prefix
-    or via a .env file in the working directory.
+    or via .env file in the project root directory.
 
     Attributes:
         anki_connect_url: URL of the AnkiConnect API server.
@@ -20,8 +26,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="ANKIRAG_",
-        env_file=".env",
+        env_file=str(_ENV_FILE) if _ENV_FILE.exists() else None,
         env_file_encoding="utf-8",
+        extra="ignore",  # Ignore other env vars from shared .env
     )
 
     anki_connect_url: str = Field(
@@ -30,8 +37,8 @@ class Settings(BaseSettings):
     )
 
     api_base_url: str = Field(
-        default="http://localhost:8000",
-        description="AnkiRAG backend API URL",
+        default="http://localhost:8080",
+        description="AnkiRAG backend API URL (nginx)",
     )
 
     sync_interval_minutes: int = Field(
@@ -47,6 +54,22 @@ class Settings(BaseSettings):
     default_model: str = Field(
         default="Basic",
         description="Default Anki note model",
+    )
+
+    # Import settings
+    import_batch_size: int = Field(
+        default=100,
+        description="Number of cards to read from Anki per batch",
+    )
+
+    api_batch_size: int = Field(
+        default=50,
+        description="Number of cards to send to API per request",
+    )
+
+    import_timeout: int = Field(
+        default=120,
+        description="Timeout for import API requests in seconds",
     )
 
 
