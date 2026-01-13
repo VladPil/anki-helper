@@ -31,6 +31,12 @@ class CardType(StrEnum):
 class GenerationRequest(BaseSchema):
     """Схема запроса на генерацию карточек."""
 
+    idempotency_key: str | None = Field(
+        default=None,
+        max_length=64,
+        description="Client-generated key to prevent duplicate jobs",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
+    )
     topic: str = Field(
         ...,
         min_length=1,
@@ -281,4 +287,12 @@ class GenerationStreamEvent(BaseSchema):
     error: str | None = Field(
         default=None,
         description="Сообщение об ошибке",
+    )
+    card_index: int | None = Field(
+        default=None,
+        description="Индекс текущей карточки",
+    )
+    resume_token: str | None = Field(
+        default=None,
+        description="Token for resuming stream (job_id:card_index)",
     )

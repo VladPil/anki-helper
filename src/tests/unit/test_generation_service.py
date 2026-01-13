@@ -534,8 +534,8 @@ class TestProcessJob:
         }
         generation_service._workflow = mock_workflow
 
-        with patch("src.generation.service.CARD_GENERATION_COUNT"), \
-             patch("src.generation.service.CARD_GENERATION_LATENCY"):
+        with patch("src.modules.generation.service.CARD_GENERATION_COUNT"), \
+             patch("src.modules.generation.service.CARD_GENERATION_LATENCY"):
             await generation_service.process_job(sample_job.id, sample_request)
 
         # Verify workflow was called
@@ -556,8 +556,8 @@ class TestProcessJob:
         mock_workflow.run.return_value = {"cards": []}
         generation_service._workflow = mock_workflow
 
-        with patch("src.generation.service.CARD_GENERATION_COUNT"), \
-             patch("src.generation.service.CARD_GENERATION_LATENCY"):
+        with patch("src.modules.generation.service.CARD_GENERATION_COUNT"), \
+             patch("src.modules.generation.service.CARD_GENERATION_LATENCY"):
             await generation_service.process_job(sample_job.id, sample_request)
 
         # Job should still call workflow but check cancellation after
@@ -577,8 +577,8 @@ class TestProcessJob:
         mock_workflow.run.side_effect = Exception("Workflow error")
         generation_service._workflow = mock_workflow
 
-        with patch("src.generation.service.CARD_GENERATION_COUNT"), \
-             patch("src.generation.service.CARD_GENERATION_LATENCY"):
+        with patch("src.modules.generation.service.CARD_GENERATION_COUNT"), \
+             patch("src.modules.generation.service.CARD_GENERATION_LATENCY"):
             await generation_service.process_job(sample_job.id, sample_request)
 
         # Verify job was updated with error status

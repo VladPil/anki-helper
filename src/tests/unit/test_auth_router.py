@@ -63,7 +63,7 @@ def app_with_mocked_db():
 
 
 class TestRegisterEndpoint:
-    """Tests for POST /api/v1/auth/register endpoint."""
+    """Tests for POST /api/auth/register endpoint."""
 
     def test_register_success(self, app_with_mocked_db, mock_token_response):
         """Test successful user registration."""
@@ -77,7 +77,7 @@ class TestRegisterEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/register",
+            "/api/auth/register",
             json={
                 "email": "newuser@example.com",
                 "password": "securepassword123",
@@ -105,7 +105,7 @@ class TestRegisterEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/register",
+            "/api/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "securepassword123",
@@ -120,7 +120,7 @@ class TestRegisterEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/register",
+            "/api/auth/register",
             json={
                 "email": "invalid-email",
                 "password": "securepassword123",
@@ -135,7 +135,7 @@ class TestRegisterEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/register",
+            "/api/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "short",
@@ -150,7 +150,7 @@ class TestRegisterEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/register",
+            "/api/auth/register",
             json={
                 "email": "test@example.com",
                 "password": "securepassword123",
@@ -162,7 +162,7 @@ class TestRegisterEndpoint:
 
 
 class TestLoginEndpoint:
-    """Tests for POST /api/v1/auth/login endpoint."""
+    """Tests for POST /api/auth/login endpoint."""
 
     def test_login_success(self, app_with_mocked_db, mock_token_response):
         """Test successful login."""
@@ -176,7 +176,7 @@ class TestLoginEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/login",
+            "/api/auth/login",
             json={
                 "email": "test@example.com",
                 "password": "correctpassword",
@@ -204,7 +204,7 @@ class TestLoginEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/login",
+            "/api/auth/login",
             json={
                 "email": "test@example.com",
                 "password": "wrongpassword",
@@ -228,7 +228,7 @@ class TestLoginEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/login",
+            "/api/auth/login",
             json={
                 "email": "inactive@example.com",
                 "password": "correctpassword",
@@ -242,7 +242,7 @@ class TestLoginEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/login",
+            "/api/auth/login",
             json={
                 "password": "somepassword",
             },
@@ -255,7 +255,7 @@ class TestLoginEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/login",
+            "/api/auth/login",
             json={
                 "email": "test@example.com",
             },
@@ -265,7 +265,7 @@ class TestLoginEndpoint:
 
 
 class TestRefreshEndpoint:
-    """Tests for POST /api/v1/auth/refresh endpoint."""
+    """Tests for POST /api/auth/refresh endpoint."""
 
     def test_refresh_success(self, app_with_mocked_db, mock_token_response):
         """Test successful token refresh."""
@@ -279,7 +279,7 @@ class TestRefreshEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/refresh",
+            "/api/auth/refresh",
             json={
                 "refresh_token": "valid_refresh_token",
             },
@@ -304,7 +304,7 @@ class TestRefreshEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/refresh",
+            "/api/auth/refresh",
             json={
                 "refresh_token": "invalid_token",
             },
@@ -327,7 +327,7 @@ class TestRefreshEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/refresh",
+            "/api/auth/refresh",
             json={
                 "refresh_token": "revoked_token",
             },
@@ -349,7 +349,7 @@ class TestRefreshEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/refresh",
+            "/api/auth/refresh",
             json={
                 "refresh_token": "valid_token_inactive_user",
             },
@@ -362,7 +362,7 @@ class TestRefreshEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/refresh",
+            "/api/auth/refresh",
             json={},
         )
 
@@ -370,7 +370,7 @@ class TestRefreshEndpoint:
 
 
 class TestLogoutEndpoint:
-    """Tests for POST /api/v1/auth/logout endpoint."""
+    """Tests for POST /api/auth/logout endpoint."""
 
     def test_logout_success(self, app_with_mocked_db):
         """Test successful logout."""
@@ -384,7 +384,7 @@ class TestLogoutEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/logout",
+            "/api/auth/logout",
             json={
                 "refresh_token": "valid_refresh_token",
             },
@@ -406,7 +406,7 @@ class TestLogoutEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/logout",
+            "/api/auth/logout",
             json={
                 "refresh_token": "nonexistent_token",
             },
@@ -420,7 +420,7 @@ class TestLogoutEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/logout",
+            "/api/auth/logout",
             json={},
         )
 
@@ -431,7 +431,7 @@ class TestLogoutEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/auth/logout",
+            "/api/auth/logout",
             json={
                 "refresh_token": "",
             },

@@ -163,7 +163,7 @@ async def get_user_by_id(
 
 
 @router.get(
-    "/",
+    "",
     response_model=UserListResponse,
     status_code=status.HTTP_200_OK,
     summary="Получить список пользователей",

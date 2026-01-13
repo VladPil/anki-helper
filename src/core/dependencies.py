@@ -173,14 +173,18 @@ async def get_token_payload(
 
 
 async def get_current_user_id(
-    payload: TokenPayload = Depends(get_token_payload),
+    token: str = Depends(get_token),
     blacklist: TokenBlacklistService = None,  # type: ignore[assignment]
 ) -> UUID:
     """
     Получить ID текущего пользователя из токена.
 
+    Поддерживает два типа авторизации:
+    1. Agent API Token (из AGENT_API_TOKEN env) - возвращает AGENT_USER_ID
+    2. JWT токен - стандартная JWT авторизация
+
     Args:
-        payload: Payload токена.
+        token: Токен (agent или JWT).
         blacklist: Сервис черного списка токенов.
 
     Returns:
@@ -188,7 +192,18 @@ async def get_current_user_id(
 
     Raises:
         TokenRevokedError: Токен отозван.
+        TokenInvalidError: Токен невалиден.
+        AuthenticationError: Agent token не настроен.
     """
+    # Проверяем agent token
+    if settings.agent.api_token and token == settings.agent.api_token:
+        if not settings.agent.user_id:
+            raise AuthenticationError("AGENT_USER_ID not configured")
+        return UUID(settings.agent.user_id)
+
+    # Иначе валидируем как JWT
+    payload = verify_access_token(token)
+
     # Проверяем черный список, если есть jti
     if blacklist is not None and payload.jti:
         if await blacklist.is_blacklisted(payload.jti):

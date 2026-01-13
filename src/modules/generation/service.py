@@ -54,9 +54,11 @@ class GenerationService:
     JOB_STATUS_PREFIX = "generation:status:"
     JOB_CANCEL_PREFIX = "generation:cancel:"
     USER_JOBS_PREFIX = "generation:user_jobs:"
+    IDEMPOTENCY_PREFIX = "generation:idempotency:"
 
     # Job expiration time (24 hours)
     JOB_TTL = 60 * 60 * 24
+    IDEMPOTENCY_TTL = 60 * 60 * 24  # 24 hours for idempotency keys
 
     def __init__(self, redis: Redis) -> None:
         """
@@ -125,6 +127,11 @@ class GenerationService:
         await self._redis.lpush(user_jobs_key, str(job_id))
         await self._redis.ltrim(user_jobs_key, 0, 99)  # Keep last 100 jobs
 
+        # Store idempotency key mapping if provided
+        if request.idempotency_key:
+            idem_key = f"{self.IDEMPOTENCY_PREFIX}{user_id}:{request.idempotency_key}"
+            await self._redis.setex(idem_key, self.IDEMPOTENCY_TTL, str(job_id))
+
         logger.info(
             "Created generation job",
             job_id=str(job_id),
@@ -156,6 +163,29 @@ class GenerationService:
             return None
 
         return GenerationJob.model_validate_json(job_data)
+
+    async def get_job_by_idempotency_key(
+        self,
+        idempotency_key: str,
+        user_id: UUID,
+    ) -> GenerationJob | None:
+        """
+        Получить существующее задание по idempotency key.
+
+        Args:
+            idempotency_key: Ключ идемпотентности от клиента
+            user_id: UUID пользователя
+
+        Returns:
+            GenerationJob или None если не найдено
+        """
+        key = f"{self.IDEMPOTENCY_PREFIX}{user_id}:{idempotency_key}"
+        job_id_str = await self._redis.get(key)
+
+        if job_id_str:
+            return await self.get_job(UUID(job_id_str.decode() if isinstance(job_id_str, bytes) else job_id_str))
+
+        return None
 
     async def get_job_status(
         self,
@@ -537,6 +567,46 @@ class GenerationService:
                     jobs.append(job)
 
         return jobs
+
+    async def enqueue_job(
+        self,
+        job_id: UUID,
+        user_id: UUID,
+        request: GenerationRequest,
+    ) -> None:
+        """
+        Enqueue generation job to FastStream worker.
+
+        Args:
+            job_id: UUID of the created job
+            user_id: UUID of the user
+            request: Generation request parameters
+        """
+        from src.workers.broker import broker
+        from src.workers.generation import GenerationTask
+
+        task = GenerationTask(
+            job_id=job_id,
+            user_id=user_id,
+            topic=request.topic,
+            deck_id=request.deck_id,
+            num_cards=request.num_cards,
+            card_type=request.card_type.value,
+            difficulty=request.difficulty,
+            language=request.language,
+            fact_check=request.fact_check,
+            include_sources=request.include_sources,
+            context=request.context,
+            model_id=request.model_id,
+            tags=request.tags,
+        )
+
+        await broker.publish(task, "generation:tasks")
+        logger.info(
+            "Enqueued generation job",
+            job_id=str(job_id),
+            user_id=str(user_id),
+        )
 
 
 # Singleton instance

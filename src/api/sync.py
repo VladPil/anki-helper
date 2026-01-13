@@ -9,7 +9,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
+from src.core.dependencies import CurrentUserId
 from src.modules.sync.schemas import (
+    AgentImportRequest,
+    AgentImportResult,
     ImportRequest,
     ImportResult,
     SyncPullRequest,
@@ -25,23 +28,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sync", tags=["Синхронизация"])
 
-
-async def get_current_user_id() -> UUID:
-    """Получить идентификатор текущего аутентифицированного пользователя.
-
-    Это заглушка, которую следует заменить реальной зависимостью
-    аутентификации.
-
-    Returns:
-        UUID: Идентификатор текущего пользователя.
-    """
-    # TODO: Replace with actual auth dependency
-    from uuid import uuid4
-
-    return uuid4()
-
-
-CurrentUserID = Annotated[UUID, Depends(get_current_user_id)]
 DBSession = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -72,7 +58,7 @@ SyncServiceDep = Annotated[SyncService, Depends(get_sync_service)]
 )
 async def push_cards(
     request: SyncPushRequest,
-    user_id: CurrentUserID,
+    user_id: CurrentUserId,
     service: SyncServiceDep,
 ) -> SyncPushResponse:
     """Отправить карточки в очередь синхронизации.
@@ -96,7 +82,7 @@ async def push_cards(
     description="Получает общий статус синхронизации для аутентифицированного пользователя.",
 )
 async def get_status(
-    user_id: CurrentUserID,
+    user_id: CurrentUserId,
     service: SyncServiceDep,
 ) -> SyncStatus:
     """Получить общий статус синхронизации.
@@ -120,7 +106,7 @@ async def get_status(
 )
 async def pull_status(
     request: SyncPullRequest,
-    user_id: CurrentUserID,
+    user_id: CurrentUserId,
     service: SyncServiceDep,
 ) -> SyncPullResponse:
     """Получить статус синхронизации карточек.
@@ -148,7 +134,7 @@ async def pull_status(
 )
 async def execute_sync(
     sync_id: Annotated[UUID, Path(description="Идентификатор задачи синхронизации")],
-    user_id: CurrentUserID,
+    user_id: CurrentUserId,
     service: SyncServiceDep,
 ) -> SyncResult:
     """Выполнить задачу синхронизации.
@@ -176,7 +162,7 @@ async def execute_sync(
 )
 async def import_apkg(
     file: Annotated[UploadFile, File(description="Файл Anki .apkg")],
-    user_id: CurrentUserID,
+    user_id: CurrentUserId,
     service: SyncServiceDep,
     deck_id: Annotated[
         UUID | None,
@@ -265,7 +251,7 @@ async def import_apkg(
 )
 async def import_apkg_stream(
     file: Annotated[UploadFile, File(description="Файл Anki .apkg")],
-    user_id: CurrentUserID,
+    user_id: CurrentUserId,
     service: SyncServiceDep,
     deck_id: Annotated[
         UUID | None,
@@ -352,3 +338,40 @@ async def import_apkg_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post(
+    "/import/cards",
+    response_model=AgentImportResult,
+    status_code=status.HTTP_201_CREATED,
+    summary="Импортировать карточки из локального Anki",
+    description=(
+        "Импортирует карточки из локального Anki через агента. "
+        "Создаёт колоду если не существует и добавляет карточки."
+    ),
+)
+async def import_from_agent(
+    request: AgentImportRequest,
+    user_id: CurrentUserId,
+    service: SyncServiceDep,
+) -> AgentImportResult:
+    """Импортировать карточки из локального Anki агента.
+
+    Args:
+        request: Запрос на импорт с колодой и карточками.
+        user_id: UUID текущего пользователя.
+        service: Экземпляр сервиса синхронизации.
+
+    Returns:
+        AgentImportResult: Результат импорта со статистикой.
+
+    Raises:
+        HTTPException: 400 если не указаны deck_id или deck_name.
+    """
+    if request.deck_id is None and request.deck_name is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either deck_id or deck_name must be provided",
+        )
+
+    return await service.import_from_agent(user_id, request)

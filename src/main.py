@@ -18,6 +18,7 @@ from src.api import sync as sync_router
 from src.api import system as system_router
 from src.api import templates as templates_router
 from src.api import users as users_router
+from src.core.cache import close_cache, setup_cache
 from src.core.config import settings
 from src.core.database import db_manager
 from src.core.exceptions import setup_exception_handlers
@@ -51,10 +52,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db_manager.init()
     logger.info("Database connection pool initialized")
 
+    # Initialize cache
+    await setup_cache(settings)
+    logger.info("Cache initialized")
+
     yield
 
     # Shutdown
     logger.info("Shutting down...")
+    await close_cache()
+    logger.info("Cache closed")
     await db_manager.close()
     logger.info("Database connections closed")
 
@@ -75,6 +82,7 @@ def create_app() -> FastAPI:
         docs_url="/api/docs" if settings.app.debug else None,
         redoc_url="/api/redoc" if settings.app.debug else None,
         openapi_url="/api/openapi.json" if settings.app.debug else None,
+        redirect_slashes=False,
     )
 
     # CORS middleware
@@ -95,19 +103,19 @@ def create_app() -> FastAPI:
     # Register exception handlers
     setup_exception_handlers(app)
 
-    # Include API routers with /api/v1 prefix
-    app.include_router(auth_router.router, prefix="/api/v1")
-    app.include_router(users_router.router, prefix="/api/v1")
-    app.include_router(decks_router.router, prefix="/api/v1")
-    app.include_router(cards_router.router, prefix="/api/v1")
-    app.include_router(templates_router.router, prefix="/api/v1")
-    app.include_router(prompts_router.router, prefix="/api/v1")
-    app.include_router(chat_router.router, prefix="/api/v1")
-    app.include_router(generation_router.router, prefix="/api/v1")
-    app.include_router(rag_router.router, prefix="/api/v1")
-    app.include_router(sync_router.router, prefix="/api/v1")
+    # Include API routers with /api prefix
+    app.include_router(auth_router.router, prefix="/api")
+    app.include_router(users_router.router, prefix="/api")
+    app.include_router(decks_router.router, prefix="/api")
+    app.include_router(cards_router.router, prefix="/api")
+    app.include_router(templates_router.router, prefix="/api")
+    app.include_router(prompts_router.router, prefix="/api")
+    app.include_router(chat_router.router, prefix="/api")
+    app.include_router(generation_router.router, prefix="/api")
+    app.include_router(rag_router.router, prefix="/api")
+    app.include_router(sync_router.router, prefix="/api")
 
-    # System router (no /api/v1 prefix - accessible at root)
+    # System router (no /api prefix - accessible at root)
     app.include_router(system_router.router)
 
     return app

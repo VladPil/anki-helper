@@ -77,6 +77,10 @@ class DeckResponse(UUIDTimestampSchema):
         default=None,
         description="Внутренний ID колоды в Anki",
     )
+    card_count: int = Field(
+        default=0,
+        description="Количество карточек в колоде",
+    )
 
 
 class DeckTreeResponse(DeckResponse):

@@ -16,7 +16,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Float, ForeignKey, Index, String, Text
+from sqlalchemy import BigInteger, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -38,12 +38,14 @@ class CardStatus(str, Enum):
     - APPROVED: Проверена и одобрена, готова к синхронизации
     - REJECTED: Проверена и отклонена
     - SYNCED: Успешно синхронизирована с Anki
+    - SYNC_FAILED: Ошибка синхронизации с Anki
     """
 
     DRAFT = "draft"
     APPROVED = "approved"
     REJECTED = "rejected"
     SYNCED = "synced"
+    SYNC_FAILED = "sync_failed"
 
 
 class Card(UUIDMixin, TimestampMixin, SoftDeleteMixin, AuditMixin, Base):
@@ -97,6 +99,10 @@ class Card(UUIDMixin, TimestampMixin, SoftDeleteMixin, AuditMixin, Base):
     )
     anki_card_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     anki_note_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Sync error tracking
+    sync_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sync_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Relationships
     deck: Mapped[Deck] = relationship(back_populates="cards")

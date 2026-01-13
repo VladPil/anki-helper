@@ -39,7 +39,7 @@ def get_prompt_service(
 
 
 @router.post(
-    "/",
+    "",
     response_model=PromptResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new prompt",
@@ -80,7 +80,7 @@ async def create_prompt(
 
 
 @router.get(
-    "/",
+    "",
     response_model=PromptListResponse,
     summary="List prompts",
     description="Get paginated list of LLM prompts.",

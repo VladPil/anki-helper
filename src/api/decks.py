@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
-from src.core.dependencies import get_current_user_id
+from src.core.dependencies import CurrentUserId
 from src.modules.decks.models import Deck
 from src.modules.decks.schemas import (
     CardBriefResponse,
@@ -49,7 +49,7 @@ async def get_deck_service(
 
 
 @router.post(
-    "/",
+    "",
     response_model=DeckResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Создать новую колоду",
@@ -63,7 +63,7 @@ async def get_deck_service(
 )
 async def create_deck(
     data: DeckCreate,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
 ) -> DeckResponse:
     """Создать новую колоду.
@@ -104,7 +104,7 @@ async def create_deck(
 
 
 @router.get(
-    "/",
+    "",
     response_model=PaginatedResponse[DeckResponse],
     status_code=status.HTTP_200_OK,
     summary="Получить список колод пользователя",
@@ -114,7 +114,7 @@ async def create_deck(
     },
 )
 async def list_decks(
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
     pagination: Annotated[PaginationParams, Depends()],
     parent_id: Annotated[
@@ -156,7 +156,16 @@ async def list_decks(
             limit=pagination.limit,
         )
 
-    items = [DeckResponse.model_validate(deck) for deck in decks]
+    # Get card counts for all decks
+    deck_ids = [deck.id for deck in decks]
+    card_counts = await service.get_card_counts(deck_ids) if deck_ids else {}
+
+    items = []
+    for deck in decks:
+        response = DeckResponse.model_validate(deck)
+        response.card_count = card_counts.get(deck.id, 0)
+        items.append(response)
+
     return PaginatedResponse.create(items=items, total=total, params=pagination)
 
 
@@ -171,7 +180,7 @@ async def list_decks(
     },
 )
 async def get_deck_tree(
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
     root_id: Annotated[
         UUID | None,
@@ -197,9 +206,25 @@ async def get_deck_tree(
         root_deck_id=root_id,
     )
 
+    # Собрать все ID колод из дерева для получения card_count
+    def collect_deck_ids(deck: Deck) -> list[UUID]:
+        """Рекурсивно собрать ID всех колод в дереве."""
+        ids = [deck.id]
+        for child in deck.children:
+            ids.extend(collect_deck_ids(child))
+        return ids
+
+    all_deck_ids: list[UUID] = []
+    for deck in decks:
+        all_deck_ids.extend(collect_deck_ids(deck))
+
+    # Получить количества карточек для всех колод
+    card_counts = await service.get_card_counts(all_deck_ids) if all_deck_ids else {}
+
     def build_tree(deck: Deck) -> DeckTreeResponse:
         """Рекурсивно построить ответ-дерево."""
         response = DeckTreeResponse.model_validate(deck)
+        response.card_count = card_counts.get(deck.id, 0)
         response.children = [build_tree(child) for child in deck.children]
         return response
 
@@ -219,7 +244,7 @@ async def get_deck_tree(
 )
 async def get_deck(
     deck_id: Annotated[UUID, Path(description="Уникальный идентификатор колоды")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
 ) -> DeckResponse:
     """Получить колоду по её ID.
@@ -245,7 +270,10 @@ async def get_deck(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Deck not found: {deck_id}",
         )
-    return DeckResponse.model_validate(deck)
+    response = DeckResponse.model_validate(deck)
+    card_counts = await service.get_card_counts([deck_id])
+    response.card_count = card_counts.get(deck_id, 0)
+    return response
 
 
 @router.get(
@@ -261,7 +289,7 @@ async def get_deck(
 )
 async def get_deck_with_cards(
     deck_id: Annotated[UUID, Path(description="Уникальный идентификатор колоды")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
 ) -> DeckWithCards:
     """Получить колоду со всеми её карточками.
@@ -313,7 +341,7 @@ async def get_deck_with_cards(
 async def update_deck(
     deck_id: Annotated[UUID, Path(description="Уникальный идентификатор колоды")],
     data: DeckUpdate,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
 ) -> DeckResponse:
     """Обновить колоду.
@@ -342,7 +370,10 @@ async def update_deck(
             data=data,
             updated_by=str(user_id),
         )
-        return DeckResponse.model_validate(deck)
+        response = DeckResponse.model_validate(deck)
+        card_counts = await service.get_card_counts([deck_id])
+        response.card_count = card_counts.get(deck_id, 0)
+        return response
     except DeckNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -368,7 +399,7 @@ async def update_deck(
 )
 async def delete_deck(
     deck_id: Annotated[UUID, Path(description="Уникальный идентификатор колоды")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
     hard: Annotated[
         bool,
@@ -422,7 +453,7 @@ async def delete_deck(
 )
 async def restore_deck(
     deck_id: Annotated[UUID, Path(description="Уникальный идентификатор колоды")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[DeckService, Depends(get_deck_service)],
 ) -> DeckResponse:
     """Восстановить мягко удалённую колоду.
@@ -444,7 +475,10 @@ async def restore_deck(
     """
     try:
         deck = await service.restore(deck_id, user_id)
-        return DeckResponse.model_validate(deck)
+        response = DeckResponse.model_validate(deck)
+        card_counts = await service.get_card_counts([deck_id])
+        response.card_count = card_counts.get(deck_id, 0)
+        return response
     except DeckNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

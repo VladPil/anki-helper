@@ -90,7 +90,7 @@ def app_with_mocked_db():
 
 
 class TestCreateDeckEndpoint:
-    """Tests for POST /api/v1/decks/ endpoint."""
+    """Tests for POST /api/decks/ endpoint."""
 
     def test_create_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful deck creation."""
@@ -105,7 +105,7 @@ class TestCreateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/decks/",
+            "/api/decks/",
             json={
                 "name": "Test Deck",
                 "description": "Test Description",
@@ -133,7 +133,7 @@ class TestCreateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/decks/",
+            "/api/decks/",
             json={
                 "name": "Child Deck",
                 "parent_id": str(parent_id),
@@ -157,7 +157,7 @@ class TestCreateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/decks/",
+            "/api/decks/",
             json={
                 "name": "Child Deck",
                 "parent_id": str(parent_id),
@@ -181,7 +181,7 @@ class TestCreateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/decks/",
+            "/api/decks/",
             json={
                 "name": "Child Deck",
                 "parent_id": str(parent_id),
@@ -199,7 +199,7 @@ class TestCreateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/decks/",
+            "/api/decks/",
             json={
                 "name": "",
                 "description": "Test Description",
@@ -213,7 +213,7 @@ class TestCreateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/decks/",
+            "/api/decks/",
             json={
                 "name": "Test Deck",
             },
@@ -224,7 +224,7 @@ class TestCreateDeckEndpoint:
 
 
 class TestListDecksEndpoint:
-    """Tests for GET /api/v1/decks/ endpoint."""
+    """Tests for GET /api/decks/ endpoint."""
 
     def test_list_decks_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test listing user's decks."""
@@ -238,7 +238,7 @@ class TestListDecksEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/decks/")
+        response = client.get("/api/decks/")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -258,7 +258,7 @@ class TestListDecksEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/decks/?page=1&page_size=10")
+        response = client.get("/api/decks/?page=1&page_size=10")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -277,7 +277,7 @@ class TestListDecksEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/decks/?root_only=true")
+        response = client.get("/api/decks/?root_only=true")
 
         assert response.status_code == status.HTTP_200_OK
         mock_service.list_root_decks.assert_called_once()
@@ -294,7 +294,7 @@ class TestListDecksEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/decks/")
+        response = client.get("/api/decks/")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -303,7 +303,7 @@ class TestListDecksEndpoint:
 
 
 class TestGetDeckEndpoint:
-    """Tests for GET /api/v1/decks/{deck_id} endpoint."""
+    """Tests for GET /api/decks/{deck_id} endpoint."""
 
     def test_get_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test getting a specific deck."""
@@ -317,7 +317,7 @@ class TestGetDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get(f"/api/v1/decks/{mock_deck.id}")
+        response = client.get(f"/api/decks/{mock_deck.id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -337,13 +337,13 @@ class TestGetDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get(f"/api/v1/decks/{deck_id}")
+        response = client.get(f"/api/decks/{deck_id}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestUpdateDeckEndpoint:
-    """Tests for PATCH /api/v1/decks/{deck_id} endpoint."""
+    """Tests for PATCH /api/decks/{deck_id} endpoint."""
 
     def test_update_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful deck update."""
@@ -368,7 +368,7 @@ class TestUpdateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            f"/api/v1/decks/{mock_deck.id}",
+            f"/api/decks/{mock_deck.id}",
             json={"name": "Updated Deck"},
         )
 
@@ -391,7 +391,7 @@ class TestUpdateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            f"/api/v1/decks/{deck_id}",
+            f"/api/decks/{deck_id}",
             json={"name": "Updated Name"},
         )
 
@@ -413,7 +413,7 @@ class TestUpdateDeckEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            f"/api/v1/decks/{deck_id}",
+            f"/api/decks/{deck_id}",
             json={"parent_id": str(parent_id)},
         )
 
@@ -421,7 +421,7 @@ class TestUpdateDeckEndpoint:
 
 
 class TestDeleteDeckEndpoint:
-    """Tests for DELETE /api/v1/decks/{deck_id} endpoint."""
+    """Tests for DELETE /api/decks/{deck_id} endpoint."""
 
     def test_delete_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful soft delete."""
@@ -435,7 +435,7 @@ class TestDeleteDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.delete(f"/api/v1/decks/{mock_deck.id}")
+        response = client.delete(f"/api/decks/{mock_deck.id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -453,7 +453,7 @@ class TestDeleteDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.delete(f"/api/v1/decks/{mock_deck.id}?hard=true")
+        response = client.delete(f"/api/decks/{mock_deck.id}?hard=true")
 
         assert response.status_code == status.HTTP_200_OK
         mock_service.delete.assert_called_once()
@@ -474,13 +474,13 @@ class TestDeleteDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.delete(f"/api/v1/decks/{deck_id}")
+        response = client.delete(f"/api/decks/{deck_id}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestGetDeckTreeEndpoint:
-    """Tests for GET /api/v1/decks/tree endpoint."""
+    """Tests for GET /api/decks/tree endpoint."""
 
     def test_get_deck_tree_success(self, app_with_mocked_db, mock_user_id, mock_deck_with_children):
         """Test getting deck hierarchy tree."""
@@ -494,7 +494,7 @@ class TestGetDeckTreeEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/decks/tree")
+        response = client.get("/api/decks/tree")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -504,7 +504,7 @@ class TestGetDeckTreeEndpoint:
 
 
 class TestRestoreDeckEndpoint:
-    """Tests for POST /api/v1/decks/{deck_id}/restore endpoint."""
+    """Tests for POST /api/decks/{deck_id}/restore endpoint."""
 
     def test_restore_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful deck restoration."""
@@ -518,7 +518,7 @@ class TestRestoreDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/decks/{mock_deck.id}/restore")
+        response = client.post(f"/api/decks/{mock_deck.id}/restore")
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -536,6 +536,6 @@ class TestRestoreDeckEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/decks/{deck_id}/restore")
+        response = client.post(f"/api/decks/{deck_id}/restore")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND

@@ -343,3 +343,87 @@ class ImportProgress(BaseSchema):
     current: int = Field(description="Current item being processed")
     total: int = Field(description="Total items to process")
     message: str = Field(description="Progress message")
+
+
+# ==================== Agent Import Schemas ====================
+
+
+class AgentImportCard(BaseSchema):
+    """Schema for a card to import from local Anki.
+
+    Attributes:
+        front: Card front content.
+        back: Card back content.
+        tags: List of card tags.
+        anki_note_id: Original note ID in Anki.
+    """
+
+    front: str = Field(description="Card front content")
+    back: str = Field(description="Card back content")
+    tags: list[str] = Field(
+        default_factory=list,
+        description="List of card tags",
+    )
+    anki_note_id: int | None = Field(
+        default=None,
+        description="Original note ID in Anki",
+    )
+
+
+class AgentImportRequest(BaseSchema):
+    """Schema for importing cards from local Anki agent.
+
+    Attributes:
+        deck_id: UUID of existing deck to import into.
+        deck_name: Name of deck to create or use.
+        cards: List of cards to import.
+        mark_as_synced: Mark imported cards as synced.
+    """
+
+    deck_id: UUID | None = Field(
+        default=None,
+        description="UUID of existing deck to import into",
+    )
+    deck_name: str | None = Field(
+        default=None,
+        description="Name of deck to create if deck_id not provided",
+    )
+    cards: list[AgentImportCard] = Field(
+        min_length=1,
+        max_length=1000,
+        description="List of cards to import",
+    )
+    mark_as_synced: bool = Field(
+        default=True,
+        description="Mark imported cards as synced (already in Anki)",
+    )
+
+
+class AgentImportResult(BaseSchema):
+    """Schema for agent import result.
+
+    Attributes:
+        deck_id: UUID of the deck.
+        deck_name: Name of the deck.
+        total_cards: Total cards in request.
+        imported_cards: Successfully imported cards count.
+        skipped_cards: Skipped cards count (duplicates).
+        failed_cards: Failed cards count.
+        card_ids: List of created card UUIDs.
+        errors: List of error messages.
+    """
+
+    deck_id: UUID = Field(description="UUID of the deck")
+    deck_name: str = Field(description="Name of the deck")
+    total_cards: int = Field(description="Total cards in request")
+    imported_cards: int = Field(description="Successfully imported cards count")
+    skipped_cards: int = Field(description="Skipped cards count (duplicates)")
+    failed_cards: int = Field(description="Failed cards count")
+    card_ids: list[UUID] = Field(
+        default_factory=list,
+        description="List of created card UUIDs",
+    )
+    errors: list[str] = Field(
+        default_factory=list,
+        description="List of error messages",
+    )

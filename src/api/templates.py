@@ -42,7 +42,7 @@ def get_template_service(
 
 
 @router.post(
-    "/",
+    "",
     response_model=TemplateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Создать новый шаблон карточки",
@@ -82,7 +82,7 @@ async def create_template(
 
 
 @router.get(
-    "/",
+    "",
     response_model=TemplateListResponse,
     status_code=status.HTTP_200_OK,
     summary="Получить список шаблонов",

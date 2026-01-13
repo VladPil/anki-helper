@@ -15,6 +15,9 @@ from src.shared.uuid7 import uuid7
 
 from .apkg_parser import ApkgParser
 from .schemas import (
+    AgentImportCard,
+    AgentImportRequest,
+    AgentImportResult,
     CardSyncState,
     CardSyncStatus,
     ImportedCard,
@@ -537,4 +540,192 @@ class SyncService:
             failed_cards=failed_count,
             errors=errors,
             duration_seconds=duration,
+        )
+
+    async def import_from_agent(
+        self,
+        user_id: UUID,
+        request: AgentImportRequest,
+    ) -> AgentImportResult:
+        """Import cards from local Anki agent.
+
+        Args:
+            user_id: UUID of the requesting user.
+            request: Import request with deck and cards.
+
+        Returns:
+            Import result with statistics.
+        """
+        from sqlalchemy import or_, select
+
+        from src.modules.cards.models import Card, CardStatus
+        from src.modules.decks.models import Deck
+        from src.modules.decks.schemas import DeckCreate
+        from src.modules.decks.service import DeckService
+        from src.modules.templates.models import CardTemplate
+        from src.modules.templates.service import TemplateService
+
+        deck_service = DeckService(self.db)
+        template_service = TemplateService(self.db)
+
+        errors: list[str] = []
+        card_ids: list[UUID] = []
+        imported_count = 0
+        skipped_count = 0
+        failed_count = 0
+
+        # Get or create deck
+        deck: Deck | None = None
+        deck_name = request.deck_name or "Imported from Anki"
+
+        if request.deck_id:
+            deck = await deck_service.get_by_id_for_user(request.deck_id, user_id)
+            if deck:
+                deck_name = deck.name
+            else:
+                errors.append(f"Deck with ID {request.deck_id} not found")
+
+        if deck is None and request.deck_name:
+            # Try to find existing deck by name
+            stmt = select(Deck).where(
+                Deck.owner_id == user_id,
+                Deck.name == request.deck_name,
+                Deck.deleted_at.is_(None),
+            )
+            result = await self.db.execute(stmt)
+            deck = result.scalar_one_or_none()
+
+            if deck is None:
+                # Create new deck
+                try:
+                    deck_data = DeckCreate(
+                        name=request.deck_name,
+                        description=f"Импортировано из Anki: {request.deck_name}",
+                    )
+                    deck = await deck_service.create(user_id, deck_data)
+                    logger.info(
+                        "Created deck %s for import from agent",
+                        deck.id,
+                    )
+                except Exception as e:
+                    errors.append(f"Failed to create deck: {str(e)}")
+                    return AgentImportResult(
+                        deck_id=uuid7(),
+                        deck_name=deck_name,
+                        total_cards=len(request.cards),
+                        imported_cards=0,
+                        skipped_cards=0,
+                        failed_cards=len(request.cards),
+                        card_ids=[],
+                        errors=errors,
+                    )
+
+        if deck is None:
+            errors.append("Could not find or create deck")
+            return AgentImportResult(
+                deck_id=uuid7(),
+                deck_name=deck_name,
+                total_cards=len(request.cards),
+                imported_cards=0,
+                skipped_cards=0,
+                failed_cards=len(request.cards),
+                card_ids=[],
+                errors=errors,
+            )
+
+        # Find Basic template (system template)
+        stmt = select(CardTemplate).where(
+            CardTemplate.name == "basic",
+            or_(
+                CardTemplate.is_system.is_(True),
+                CardTemplate.owner_id == user_id,
+            ),
+        )
+        result = await self.db.execute(stmt)
+        template = result.scalar_one_or_none()
+
+        if template is None:
+            # Try to find any template
+            stmt = select(CardTemplate).where(
+                or_(
+                    CardTemplate.is_system.is_(True),
+                    CardTemplate.owner_id == user_id,
+                ),
+            ).limit(1)
+            result = await self.db.execute(stmt)
+            template = result.scalar_one_or_none()
+
+        if template is None:
+            errors.append("No card template found. Please create a Basic template first.")
+            return AgentImportResult(
+                deck_id=deck.id,
+                deck_name=deck.name,
+                total_cards=len(request.cards),
+                imported_cards=0,
+                skipped_cards=0,
+                failed_cards=len(request.cards),
+                card_ids=[],
+                errors=errors,
+            )
+
+        # Import cards
+        for card_data in request.cards:
+            try:
+                # Check for existing card with same anki_note_id
+                if card_data.anki_note_id:
+                    stmt = select(Card).where(
+                        Card.deck_id == deck.id,
+                        Card.anki_note_id == card_data.anki_note_id,
+                    )
+                    result = await self.db.execute(stmt)
+                    existing_card = result.scalar_one_or_none()
+
+                    if existing_card:
+                        skipped_count += 1
+                        continue
+
+                # Determine status
+                status = CardStatus.SYNCED if request.mark_as_synced else CardStatus.APPROVED
+
+                # Create card
+                card = Card(
+                    deck_id=deck.id,
+                    template_id=template.id,
+                    fields={"Front": card_data.front, "Back": card_data.back},
+                    tags=card_data.tags,
+                    status=status,
+                    anki_note_id=card_data.anki_note_id,
+                )
+
+                self.db.add(card)
+                await self.db.flush()
+                await self.db.refresh(card)
+
+                card_ids.append(card.id)
+                imported_count += 1
+
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"Failed to import card: {str(e)}")
+                logger.warning("Failed to import card: %s", str(e))
+
+        await self.db.commit()
+
+        logger.info(
+            "Imported %d cards from agent to deck %s (skipped: %d, failed: %d)",
+            imported_count,
+            deck.id,
+            skipped_count,
+            failed_count,
+        )
+
+        return AgentImportResult(
+            deck_id=deck.id,
+            deck_name=deck.name,
+            total_cards=len(request.cards),
+            imported_cards=imported_count,
+            skipped_cards=skipped_count,
+            failed_cards=failed_count,
+            card_ids=card_ids,
+            errors=errors,
         )

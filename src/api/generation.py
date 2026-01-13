@@ -10,6 +10,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from src.core.dependencies import CurrentUserId, DatabaseSession
 from src.core.logging import get_structured_logger
+from src.core.rate_limit import GENERATION_LIMITER, rate_limit
 from src.modules.generation.schemas import (
     GenerationJob,
     GenerationJobStatus,
@@ -31,6 +32,7 @@ router = APIRouter(prefix="/generate", tags=["Генерация"])
     summary="Запустить генерацию карточек",
     description="Запускает асинхронную задачу генерации карточек.",
 )
+@rate_limit(GENERATION_LIMITER)
 async def generate_cards(
     request: GenerationRequest,
     background_tasks: BackgroundTasks,
@@ -43,6 +45,8 @@ async def generate_cards(
     Создает новую задачу генерации и запускает обработку в фоновом режиме.
     Немедленно возвращает идентификатор задачи для отслеживания прогресса.
 
+    Поддерживает idempotency_key для предотвращения дублирования задач при retry.
+
     Args:
         request: Параметры запроса на генерацию.
         background_tasks: Фоновые задачи FastAPI.
@@ -53,6 +57,24 @@ async def generate_cards(
     Returns:
         GenerationResponse: Ответ с идентификатором задачи и начальным статусом.
     """
+    # Check idempotency key for existing job
+    if request.idempotency_key:
+        existing_job = await service.get_job_by_idempotency_key(
+            idempotency_key=request.idempotency_key,
+            user_id=user_id,
+        )
+        if existing_job:
+            logger.info(
+                "Returning existing job for idempotency key",
+                job_id=str(existing_job.id),
+                idempotency_key=request.idempotency_key,
+            )
+            return GenerationResponse(
+                job_id=existing_job.id,
+                status=existing_job.status,
+                message="Existing job returned (idempotency key match)",
+            )
+
     logger.info(
         "Starting card generation",
         user_id=str(user_id),
@@ -290,6 +312,95 @@ async def generate_cards_stream(
             yield {
                 "event": "error",
                 "data": {"error": str(e)},
+            }
+
+    return EventSourceResponse(event_generator())
+
+
+@router.get(
+    "/stream",
+    status_code=status.HTTP_200_OK,
+    summary="Подписаться на события задачи генерации",
+    description="SSE поток событий задачи с поддержкой возобновления.",
+)
+async def subscribe_to_job_stream(
+    job_id: Annotated[UUID, Query(description="ID задачи генерации для стриминга")],
+    user_id: CurrentUserId,
+    db: DatabaseSession,
+    service: Annotated[GenerationService, Depends(get_generation_service)],
+    resume_from: Annotated[
+        int | None,
+        Query(description="Номер карточки для возобновления после reconnect"),
+    ] = None,
+) -> EventSourceResponse:
+    """Подписаться на события задачи генерации с поддержкой возобновления.
+
+    Позволяет клиенту возобновить получение событий после разрыва соединения,
+    используя resume_from параметр с номером последней полученной карточки.
+
+    Args:
+        job_id: ID задачи генерации.
+        resume_from: Номер карточки для возобновления (0-based index).
+        user_id: Идентификатор текущего аутентифицированного пользователя.
+        db: Сессия базы данных.
+        service: Экземпляр сервиса генерации.
+
+    Returns:
+        EventSourceResponse: Поток событий генерации.
+
+    Raises:
+        HTTPException: 404 если задача не найдена, 403 если доступ запрещен.
+    """
+    job = await service.get_job(job_id=job_id, db=db)
+
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Generation job {job_id} not found",
+        )
+
+    if job.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this generation job",
+        )
+
+    async def event_generator() -> AsyncGenerator[dict[str, Any], None]:
+        """Генерирует SSE события для задачи генерации."""
+        start_index = resume_from or 0
+
+        # First, yield already generated cards (for resume)
+        for i, card in enumerate(job.cards[start_index:], start=start_index):
+            progress = (i + 1) / job.num_cards_requested * 100 if job.num_cards_requested > 0 else 0
+            event = {
+                "type": "card",
+                "card": card.model_dump() if hasattr(card, 'model_dump') else card,
+                "progress": progress,
+                "card_index": i,
+                "resume_token": f"{job_id}:{i}",
+            }
+            yield {"event": "card", "data": event}
+            await asyncio.sleep(0)
+
+        # If job is still running, this would need real-time updates
+        # For completed jobs, yield completion event
+        if job.status == GenerationStatus.COMPLETED:
+            yield {
+                "event": "complete",
+                "data": {
+                    "type": "complete",
+                    "progress": 100.0,
+                    "message": "Generation completed",
+                    "total_cards": len(job.cards),
+                },
+            }
+        elif job.status == GenerationStatus.FAILED:
+            yield {
+                "event": "error",
+                "data": {
+                    "type": "error",
+                    "error": job.error_message or "Generation failed",
+                },
             }
 
     return EventSourceResponse(event_generator())

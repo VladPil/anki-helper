@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
-from src.modules.auth.dependencies import get_current_active_user
+from src.core.dependencies import CurrentUserId
 from src.modules.cards.models import CardStatus
 from src.modules.cards.schemas import (
     CardApproveRequest,
@@ -31,26 +31,11 @@ from src.modules.cards.service import (
     InvalidCardStatusTransitionError,
     TemplateNotFoundError,
 )
-from src.modules.users.models import User
 from src.shared.schemas import PaginatedResponse, PaginationParams, SuccessResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cards", tags=["Карточки"])
-
-
-async def get_current_user_id(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-) -> UUID:
-    """Получить ID текущего аутентифицированного пользователя.
-
-    Args:
-        current_user: Аутентифицированный пользователь.
-
-    Returns:
-        UUID текущего пользователя.
-    """
-    return current_user.id
 
 
 async def get_card_service(
@@ -68,7 +53,7 @@ async def get_card_service(
 
 
 @router.post(
-    "/",
+    "",
     response_model=CardResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Создать новую карточку",
@@ -80,7 +65,7 @@ async def get_card_service(
 )
 async def create_card(
     data: CardCreate,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardResponse:
     """Создать новую карточку.
@@ -131,7 +116,7 @@ async def create_card(
 )
 async def create_cards_bulk(
     data: CardBulkCreate,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardBulkResponse:
     """Массово создать несколько карточек.
@@ -173,7 +158,7 @@ async def create_cards_bulk(
 
 
 @router.get(
-    "/",
+    "",
     response_model=PaginatedResponse[CardResponse],
     status_code=status.HTTP_200_OK,
     summary="Получить список карточек",
@@ -183,12 +168,12 @@ async def create_cards_bulk(
     },
 )
 async def list_cards(
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
     pagination: Annotated[PaginationParams, Depends()],
     deck_id: Annotated[
         UUID | None,
-        Query(description="Фильтр по ID колоды"),
+        Query(alias="deckId", description="Фильтр по ID колоды"),
     ] = None,
     status_filter: Annotated[
         CardStatus | None,
@@ -232,10 +217,9 @@ async def list_cards(
             limit=pagination.limit,
         )
     else:
-        # По умолчанию: список черновиков для проверки
-        cards, total = await service.list_by_status(
+        # По умолчанию: все карточки пользователя
+        cards, total = await service.list_all(
             user_id=user_id,
-            status=CardStatus.DRAFT,
             offset=pagination.offset,
             limit=pagination.limit,
         )
@@ -257,7 +241,7 @@ async def list_cards(
 )
 async def get_card(
     card_id: Annotated[UUID, Path(description="Уникальный идентификатор карточки")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardWithGenerationInfo:
     """Получить карточку по идентификатору.
@@ -305,7 +289,7 @@ async def get_card(
 async def update_card(
     card_id: Annotated[UUID, Path(description="Уникальный идентификатор карточки")],
     data: CardUpdate,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardResponse:
     """Обновить карточку.
@@ -366,7 +350,7 @@ async def update_card(
 )
 async def delete_card(
     card_id: Annotated[UUID, Path(description="Уникальный идентификатор карточки")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
     hard: Annotated[
         bool,
@@ -420,7 +404,7 @@ async def delete_card(
 )
 async def approve_card(
     card_id: Annotated[UUID, Path(description="Уникальный идентификатор карточки")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
     data: CardApproveRequest | None = None,
 ) -> CardResponse:
@@ -477,7 +461,7 @@ async def approve_card(
 async def reject_card(
     card_id: Annotated[UUID, Path(description="Уникальный идентификатор карточки")],
     data: CardRejectRequest,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardResponse:
     """Отклонить карточку.
@@ -530,7 +514,7 @@ async def reject_card(
 )
 async def approve_cards_bulk(
     card_ids: list[UUID],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardBulkResponse:
     """Массово одобрить несколько карточек.
@@ -573,7 +557,7 @@ async def approve_cards_bulk(
 async def reject_cards_bulk(
     card_ids: list[UUID],
     reason: str,
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardBulkResponse:
     """Массово отклонить несколько карточек.
@@ -619,7 +603,7 @@ async def reject_cards_bulk(
 )
 async def restore_card(
     card_id: Annotated[UUID, Path(description="Уникальный идентификатор карточки")],
-    user_id: Annotated[UUID, Depends(get_current_user_id)],
+    user_id: CurrentUserId,
     service: Annotated[CardService, Depends(get_card_service)],
 ) -> CardResponse:
     """Восстановить мягко удаленную карточку.

@@ -107,7 +107,7 @@ def app_with_mocked_db():
 
 
 class TestCreateCardEndpoint:
-    """Tests for POST /api/v1/cards/ endpoint."""
+    """Tests for POST /api/cards/ endpoint."""
 
     def test_create_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test successful card creation."""
@@ -122,7 +122,7 @@ class TestCreateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/",
+            "/api/cards/",
             json={
                 "deck_id": str(mock_card.deck_id),
                 "template_id": str(mock_card.template_id),
@@ -151,7 +151,7 @@ class TestCreateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/",
+            "/api/cards/",
             json={
                 "deck_id": str(deck_id),
                 "template_id": str(uuid4()),
@@ -176,7 +176,7 @@ class TestCreateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/",
+            "/api/cards/",
             json={
                 "deck_id": str(uuid4()),
                 "template_id": str(template_id),
@@ -195,7 +195,7 @@ class TestCreateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/",
+            "/api/cards/",
             json={
                 "deck_id": str(uuid4()),
                 "template_id": str(uuid4()),
@@ -210,7 +210,7 @@ class TestCreateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/",
+            "/api/cards/",
             json={
                 "deck_id": str(uuid4()),
                 "template_id": str(uuid4()),
@@ -222,7 +222,7 @@ class TestCreateCardEndpoint:
 
 
 class TestListCardsEndpoint:
-    """Tests for GET /api/v1/cards/ endpoint."""
+    """Tests for GET /api/cards/ endpoint."""
 
     def test_list_cards_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test listing user's cards."""
@@ -236,7 +236,7 @@ class TestListCardsEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/cards/")
+        response = client.get("/api/cards/")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -255,7 +255,7 @@ class TestListCardsEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get(f"/api/v1/cards/?deck_id={mock_deck_id}")
+        response = client.get(f"/api/cards/?deck_id={mock_deck_id}")
 
         assert response.status_code == status.HTTP_200_OK
         mock_service.list_by_deck.assert_called_once()
@@ -272,7 +272,7 @@ class TestListCardsEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/cards/?status=approved")
+        response = client.get("/api/cards/?status=approved")
 
         assert response.status_code == status.HTTP_200_OK
         mock_service.list_by_status.assert_called_once()
@@ -289,7 +289,7 @@ class TestListCardsEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/cards/")
+        response = client.get("/api/cards/")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -298,7 +298,7 @@ class TestListCardsEndpoint:
 
 
 class TestGetCardEndpoint:
-    """Tests for GET /api/v1/cards/{card_id} endpoint."""
+    """Tests for GET /api/cards/{card_id} endpoint."""
 
     def test_get_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test getting a specific card."""
@@ -312,7 +312,7 @@ class TestGetCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get(f"/api/v1/cards/{mock_card.id}")
+        response = client.get(f"/api/cards/{mock_card.id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -334,7 +334,7 @@ class TestGetCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get(f"/api/v1/cards/{mock_card.id}")
+        response = client.get(f"/api/cards/{mock_card.id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -354,13 +354,13 @@ class TestGetCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get(f"/api/v1/cards/{card_id}")
+        response = client.get(f"/api/cards/{card_id}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestUpdateCardEndpoint:
-    """Tests for PATCH /api/v1/cards/{card_id} endpoint."""
+    """Tests for PATCH /api/cards/{card_id} endpoint."""
 
     def test_update_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test successful card update."""
@@ -387,7 +387,7 @@ class TestUpdateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            f"/api/v1/cards/{mock_card.id}",
+            f"/api/cards/{mock_card.id}",
             json={"fields": {"front": "Updated Question", "back": "Updated Answer"}},
         )
 
@@ -408,7 +408,7 @@ class TestUpdateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            f"/api/v1/cards/{card_id}",
+            f"/api/cards/{card_id}",
             json={"fields": {"front": "Q", "back": "A"}},
         )
 
@@ -431,7 +431,7 @@ class TestUpdateCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            f"/api/v1/cards/{card_id}",
+            f"/api/cards/{card_id}",
             json={"status": "draft"},
         )
 
@@ -439,7 +439,7 @@ class TestUpdateCardEndpoint:
 
 
 class TestDeleteCardEndpoint:
-    """Tests for DELETE /api/v1/cards/{card_id} endpoint."""
+    """Tests for DELETE /api/cards/{card_id} endpoint."""
 
     def test_delete_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test successful soft delete."""
@@ -453,7 +453,7 @@ class TestDeleteCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.delete(f"/api/v1/cards/{mock_card.id}")
+        response = client.delete(f"/api/cards/{mock_card.id}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -471,7 +471,7 @@ class TestDeleteCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.delete(f"/api/v1/cards/{mock_card.id}?hard=true")
+        response = client.delete(f"/api/cards/{mock_card.id}?hard=true")
 
         assert response.status_code == status.HTTP_200_OK
         mock_service.delete.assert_called_once()
@@ -492,13 +492,13 @@ class TestDeleteCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.delete(f"/api/v1/cards/{card_id}")
+        response = client.delete(f"/api/cards/{card_id}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestApproveCardEndpoint:
-    """Tests for POST /api/v1/cards/{card_id}/approve endpoint."""
+    """Tests for POST /api/cards/{card_id}/approve endpoint."""
 
     def test_approve_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test successful card approval."""
@@ -524,7 +524,7 @@ class TestApproveCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/cards/{mock_card.id}/approve")
+        response = client.post(f"/api/cards/{mock_card.id}/approve")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -544,7 +544,7 @@ class TestApproveCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/cards/{card_id}/approve")
+        response = client.post(f"/api/cards/{card_id}/approve")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -564,13 +564,13 @@ class TestApproveCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/cards/{card_id}/approve")
+        response = client.post(f"/api/cards/{card_id}/approve")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 class TestRejectCardEndpoint:
-    """Tests for POST /api/v1/cards/{card_id}/reject endpoint."""
+    """Tests for POST /api/cards/{card_id}/reject endpoint."""
 
     def test_reject_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test successful card rejection."""
@@ -597,7 +597,7 @@ class TestRejectCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            f"/api/v1/cards/{mock_card.id}/reject",
+            f"/api/cards/{mock_card.id}/reject",
             json={"reason": "Incorrect answer"},
         )
 
@@ -614,7 +614,7 @@ class TestRejectCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            f"/api/v1/cards/{mock_card.id}/reject",
+            f"/api/cards/{mock_card.id}/reject",
             json={},
         )
 
@@ -635,7 +635,7 @@ class TestRejectCardEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            f"/api/v1/cards/{card_id}/reject",
+            f"/api/cards/{card_id}/reject",
             json={"reason": "Incorrect"},
         )
 
@@ -643,7 +643,7 @@ class TestRejectCardEndpoint:
 
 
 class TestRestoreCardEndpoint:
-    """Tests for POST /api/v1/cards/{card_id}/restore endpoint."""
+    """Tests for POST /api/cards/{card_id}/restore endpoint."""
 
     def test_restore_card_success(self, app_with_mocked_db, mock_user_id, mock_card):
         """Test successful card restoration."""
@@ -657,7 +657,7 @@ class TestRestoreCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/cards/{mock_card.id}/restore")
+        response = client.post(f"/api/cards/{mock_card.id}/restore")
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -675,13 +675,13 @@ class TestRestoreCardEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.post(f"/api/v1/cards/{card_id}/restore")
+        response = client.post(f"/api/cards/{card_id}/restore")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestBulkCreateCardsEndpoint:
-    """Tests for POST /api/v1/cards/bulk endpoint."""
+    """Tests for POST /api/cards/bulk endpoint."""
 
     def test_bulk_create_success(self, app_with_mocked_db, mock_user_id, mock_card, mock_deck_id, mock_template_id):
         """Test successful bulk card creation."""
@@ -696,7 +696,7 @@ class TestBulkCreateCardsEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/bulk",
+            "/api/cards/bulk",
             json={
                 "deck_id": str(mock_deck_id),
                 "template_id": str(mock_template_id),
@@ -731,7 +731,7 @@ class TestBulkCreateCardsEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.post(
-            "/api/v1/cards/bulk",
+            "/api/cards/bulk",
             json={
                 "deck_id": str(mock_deck_id),
                 "template_id": str(mock_template_id),

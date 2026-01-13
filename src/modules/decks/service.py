@@ -659,3 +659,30 @@ class DeckService:
         for child in children:
             child.soft_delete()
             await self._soft_delete_children(child.id, user_id)
+
+    async def get_card_counts(self, deck_ids: list[UUID]) -> dict[UUID, int]:
+        """
+        Получить количество карточек для списка колод.
+
+        Args:
+            deck_ids: Список UUID колод
+
+        Returns:
+            Словарь {deck_id: card_count}
+        """
+        from src.modules.cards.models import Card
+
+        if not deck_ids:
+            return {}
+
+        stmt = (
+            select(Card.deck_id, func.count(Card.id))
+            .where(
+                Card.deck_id.in_(deck_ids),
+                Card.deleted_at.is_(None),
+            )
+            .group_by(Card.deck_id)
+        )
+
+        result = await self._session.execute(stmt)
+        return {row[0]: row[1] for row in result.all()}

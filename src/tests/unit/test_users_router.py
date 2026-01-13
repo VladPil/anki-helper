@@ -71,7 +71,7 @@ def app_with_mocked_db():
 
 
 class TestGetMeEndpoint:
-    """Tests for GET /api/v1/users/me endpoint."""
+    """Tests for GET /api/users/me endpoint."""
 
     def test_get_me_success(self, app_with_mocked_db, mock_user):
         """Test getting current user profile."""
@@ -81,7 +81,7 @@ class TestGetMeEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/users/me")
+        response = client.get("/api/users/me")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -94,7 +94,7 @@ class TestGetMeEndpoint:
         """Test getting current user without authentication returns 401/403."""
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/users/me")
+        response = client.get("/api/users/me")
 
         # Should return unauthorized (401) or forbidden (403) without auth
         assert response.status_code in [
@@ -110,7 +110,7 @@ class TestGetMeEndpoint:
 
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
-        response = client.get("/api/v1/users/me")
+        response = client.get("/api/users/me")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -120,7 +120,7 @@ class TestGetMeEndpoint:
 
 
 class TestUpdateMeEndpoint:
-    """Tests for PATCH /api/v1/users/me endpoint."""
+    """Tests for PATCH /api/users/me endpoint."""
 
     def test_update_me_display_name(self, app_with_mocked_db, mock_user):
         """Test updating current user's display name."""
@@ -145,7 +145,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"display_name": "Updated Name"},
         )
 
@@ -176,7 +176,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"email": "newemail@example.com"},
         )
 
@@ -200,7 +200,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"email": "existing@example.com"},
         )
 
@@ -229,7 +229,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"password": "newpassword123"},
         )
 
@@ -245,7 +245,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"email": "invalid-email"},
         )
 
@@ -260,7 +260,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"password": "short"},
         )
 
@@ -271,7 +271,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={"display_name": "New Name"},
         )
 
@@ -294,7 +294,7 @@ class TestUpdateMeEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me",
+            "/api/users/me",
             json={},
         )
 
@@ -302,7 +302,7 @@ class TestUpdateMeEndpoint:
 
 
 class TestUpdateMePreferencesEndpoint:
-    """Tests for PATCH /api/v1/users/me/preferences endpoint."""
+    """Tests for PATCH /api/users/me/preferences endpoint."""
 
     def test_update_preferences_language(self, app_with_mocked_db, mock_user, mock_preferences):
         """Test updating user preferences language."""
@@ -319,7 +319,7 @@ class TestUpdateMePreferencesEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me/preferences",
+            "/api/users/me/preferences",
             json={"preferred_language": "ru"},
         )
 
@@ -332,7 +332,7 @@ class TestUpdateMePreferencesEndpoint:
         client = TestClient(app_with_mocked_db, raise_server_exceptions=False)
 
         response = client.patch(
-            "/api/v1/users/me/preferences",
+            "/api/users/me/preferences",
             json={"preferred_language": "ru"},
         )
 

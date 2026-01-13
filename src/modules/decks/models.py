@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import BigInteger, ForeignKey, Index, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
@@ -74,4 +74,7 @@ class Deck(UUIDMixin, TimestampMixin, SoftDeleteMixin, AuditMixin, Base):
         lazy="selectin",
     )
 
-    __table_args__ = (Index("ix_decks_owner_parent", "owner_id", "parent_id"),)
+    __table_args__ = (
+        Index("ix_decks_owner_parent", "owner_id", "parent_id"),
+        UniqueConstraint("name", "owner_id", name="uq_decks_name_owner"),
+    )

@@ -137,6 +137,30 @@ class MetricsConfig(BaseSettings):
     port: int = 9090
 
 
+class WorkerConfig(BaseSettings):
+    """Конфигурация FastStream worker."""
+
+    model_config = SettingsConfigDict(env_prefix="WORKER_", env_file=".env", extra="ignore")
+
+    max_concurrent_tasks: int = 10
+    task_timeout: int = 600  # 10 minutes
+    retry_attempts: int = 3
+    retry_delay: int = 60  # seconds
+
+
+class AgentConfig(BaseSettings):
+    """Конфигурация локального агента.
+
+    Токен для авторизации local-agent без JWT.
+    Указывается в .env как AGENT_API_TOKEN и AGENT_USER_ID.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="AGENT_", env_file=".env", extra="ignore")
+
+    api_token: str = ""  # Токен для авторизации агента
+    user_id: str = ""  # UUID пользователя для агента
+
+
 class AppConfig(BaseSettings):
     """Общая конфигурация приложения."""
 
@@ -167,6 +191,8 @@ class Settings:
         self.telemetry = TelemetryConfig()
         self.logging = LoggingConfig()
         self.metrics = MetricsConfig()
+        self.worker = WorkerConfig()
+        self.agent = AgentConfig()
         self.app = AppConfig()
 
 
