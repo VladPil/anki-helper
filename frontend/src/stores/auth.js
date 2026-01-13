@@ -22,13 +22,18 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const response = await authApi.login(credentials)
-      token.value = response.access_token
-      refreshToken.value = response.refresh_token
-      localStorage.setItem('token', response.access_token)
-      if (response.refresh_token) {
-        localStorage.setItem('refreshToken', response.refresh_token)
+      token.value = response.accessToken
+      refreshToken.value = response.refreshToken
+      localStorage.setItem('token', response.accessToken)
+      if (response.refreshToken) {
+        localStorage.setItem('refreshToken', response.refreshToken)
       }
       await fetchProfile()
+      // Verify user was actually fetched
+      if (!user.value) {
+        error.value = 'Failed to fetch user profile'
+        return false
+      }
       return true
     } catch (err) {
       error.value = err.message || 'Login failed'
@@ -81,11 +86,11 @@ export const useAuthStore = defineStore('auth', () => {
     isRefreshing.value = true
     try {
       const response = await authApi.refreshToken(refreshToken.value)
-      token.value = response.access_token
-      localStorage.setItem('token', response.access_token)
-      if (response.refresh_token) {
-        refreshToken.value = response.refresh_token
-        localStorage.setItem('refreshToken', response.refresh_token)
+      token.value = response.accessToken
+      localStorage.setItem('token', response.accessToken)
+      if (response.refreshToken) {
+        refreshToken.value = response.refreshToken
+        localStorage.setItem('refreshToken', response.refreshToken)
       }
       return true
     } catch (err) {

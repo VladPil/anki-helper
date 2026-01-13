@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
+import { useAuthStore } from '@/stores/auth'
 
 // Utility functions for snake_case <-> camelCase conversion
 function snakeToCamel(str) {
@@ -64,9 +64,11 @@ const processQueue = (error, token = null) => {
 // Request interceptor - add auth token and convert keys to snake_case
 apiClient.interceptors.request.use(
   (config) => {
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
+    // Always get token from localStorage - it's the source of truth
+    // This avoids issues with Pinia not being initialized during some requests
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
 
     // Convert request body keys to snake_case (skip FormData)
