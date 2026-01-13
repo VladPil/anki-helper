@@ -1,14 +1,21 @@
-"""LangGraph workflow for chat with RAG context."""
+"""LangGraph workflow for chat with RAG context.
+
+Использует SOP LLM Executor для генерации ответов с поддержкой
+multi-turn conversations и RAG контекста.
+"""
 
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from typing import TypedDict
+from uuid import UUID
 
 from langgraph.graph import END, StateGraph
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
+from src.core.llm_client import LLMClient, LLMConnectionError, get_llm_client
+from src.modules.cards.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
@@ -42,20 +49,17 @@ class ChatWorkflow:
     """LangGraph workflow for chat with RAG context.
 
     This workflow:
-    1. Retrieves relevant context using RAG
-    2. Generates a response using the LLM
+    1. Retrieves relevant context using RAG (embeddings from sop_llm)
+    2. Generates a response using sop_llm Tasks API
     3. Streams the response back to the client
 
     Attributes:
         db: Database session for RAG queries.
-        llm_base_url: Base URL for the LLM service.
-        llm_api_key: API key for the LLM service.
+        llm_client: Client for SOP LLM service.
     """
 
     db: AsyncSession
-    llm_base_url: str = field(default_factory=lambda: settings.sop_llm.api_base_url)
-    llm_api_key: str = field(default_factory=lambda: "")  # Not used by sop_llm
-    llm_timeout: int = field(default_factory=lambda: settings.sop_llm.timeout)
+    llm_client: LLMClient = field(default_factory=get_llm_client)
 
     def __post_init__(self) -> None:
         """Initialize the workflow graph."""
@@ -83,6 +87,8 @@ class ChatWorkflow:
     async def _retrieve_context(self, state: ChatState) -> dict:
         """Retrieve relevant context using RAG.
 
+        Uses sop_llm embeddings API for semantic search.
+
         Args:
             state: Current workflow state.
 
@@ -92,35 +98,64 @@ class ChatWorkflow:
         context_query = state.get("context_query") or state["message"]
         session_context = state.get("context") or {}
 
-        # TODO: Implement actual RAG retrieval
-        # This is a placeholder that should be connected to the vector store
         retrieved_context = ""
         sources: list[dict] = []
 
         try:
-            # Placeholder for RAG retrieval
-            # In production, this would:
-            # 1. Embed the context_query
-            # 2. Query the vector store
-            # 3. Retrieve relevant documents
-            # 4. Format them as context
-
             deck_id = session_context.get("deck_id")
             if deck_id:
                 logger.debug("RAG query for deck %s: %s", deck_id, context_query)
-                # Placeholder: retrieve from vector store
-                # retrieved_docs = await self._vector_store.similarity_search(
-                #     query=context_query,
-                #     filter={"deck_id": str(deck_id)},
-                #     k=5,
-                # )
-                # retrieved_context = "\n\n".join(
-                #     doc.page_content for doc in retrieved_docs
-                # )
-                # sources = [
-                #     {"id": doc.metadata.get("id"), "title": doc.metadata.get("title")}
-                #     for doc in retrieved_docs
-                # ]
+
+                # Create embedding service for RAG retrieval
+                embedding_service = EmbeddingService(
+                    session=self.db,
+                    llm_client=self.llm_client,
+                )
+
+                # Search for similar cards using semantic search
+                try:
+                    deck_uuid = UUID(deck_id) if isinstance(deck_id, str) else deck_id
+                except (ValueError, TypeError):
+                    deck_uuid = None
+
+                cards_with_scores = await embedding_service.search_similar(
+                    query=context_query,
+                    deck_id=deck_uuid,
+                    limit=5,
+                    threshold=0.6,  # Lower threshold for broader context
+                )
+
+                if cards_with_scores:
+                    # Format cards as context
+                    context_parts = []
+                    for card, score in cards_with_scores:
+                        fields = card.fields or {}
+                        front = fields.get("Front", "")
+                        back = fields.get("Back", "")
+
+                        if front or back:
+                            context_parts.append(
+                                f"Карточка (релевантность {score:.2f}):\n"
+                                f"Вопрос: {front}\n"
+                                f"Ответ: {back}"
+                            )
+
+                            sources.append({
+                                "id": str(card.id),
+                                "front": front[:100],
+                                "score": round(score, 3),
+                            })
+
+                    retrieved_context = "\n\n".join(context_parts)
+
+                    logger.info(
+                        "RAG retrieved %d cards for query",
+                        len(cards_with_scores),
+                        extra={"deck_id": str(deck_id), "query": context_query[:50]},
+                    )
+
+        except LLMConnectionError as e:
+            logger.warning("Cannot connect to LLM for embeddings: %s", e)
 
         except Exception as e:
             logger.warning("Error retrieving RAG context: %s", e)
@@ -169,14 +204,15 @@ class ChatWorkflow:
 
         # System message with optional RAG context
         system_content = (
-            "You are a helpful AI assistant for Anki flashcard learning. "
-            "Help users understand their study material, create effective flashcards, "
-            "and answer questions about topics they're learning."
+            "Ты - полезный AI-ассистент для изучения с помощью карточек Anki. "
+            "Помогай пользователям понимать учебный материал, создавать эффективные карточки "
+            "и отвечать на вопросы по темам, которые они изучают. "
+            "Отвечай на русском языке."
         )
 
         if retrieved_context:
             system_content += (
-                f"\n\nRelevant context from the user's flashcards:\n{retrieved_context}"
+                f"\n\nРелевантный контекст из карточек пользователя:\n{retrieved_context}"
             )
 
         messages.append(
@@ -207,12 +243,13 @@ class ChatWorkflow:
         history: list[dict],
         context: dict | None = None,
         context_query: str | None = None,
+        sop_conversation_id: str | None = None,
     ) -> AsyncGenerator[dict, None]:
         """Stream a response to a message.
 
         This method:
         1. Retrieves RAG context if available
-        2. Streams the LLM response
+        2. Streams the LLM response via sop_llm Tasks API
         3. Yields chunks with content and metadata
 
         Args:
@@ -220,12 +257,11 @@ class ChatWorkflow:
             history: Conversation history.
             context: Session context data.
             context_query: Optional RAG query.
+            sop_conversation_id: Optional sop_llm conversation ID for context.
 
         Yields:
             Response chunks with type and content.
         """
-        import httpx
-
         # Retrieve context
         state: ChatState = {
             "message": message,
@@ -245,79 +281,66 @@ class ChatWorkflow:
         # Build messages
         messages = self._build_messages(message, history, retrieved_context)
 
-        # Stream from LLM
+        # Stream from sop_llm
         total_tokens = 0
 
         try:
-            async with httpx.AsyncClient(timeout=self.llm_timeout) as client:
-                async with client.stream(
-                    "POST",
-                    f"{self.llm_base_url}/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.llm_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "messages": messages,
-                        "stream": True,
-                        "temperature": 0.7,
-                        "max_tokens": 2048,
-                    },
-                ) as response:
-                    response.raise_for_status()
+            async for chunk in self.llm_client.stream_task(
+                messages=messages,
+                conversation_id=sop_conversation_id,
+                temperature=settings.sop_llm.default_temperature,
+                max_tokens=settings.sop_llm.default_max_tokens,
+                save_to_conversation=sop_conversation_id is not None,
+            ):
+                # Handle different chunk types
+                chunk_type = chunk.get("type", "")
 
-                    async for line in response.aiter_lines():
-                        if not line or not line.startswith("data: "):
-                            continue
+                if chunk_type == "error":
+                    yield {
+                        "type": "content",
+                        "content": f"Ошибка: {chunk.get('error', 'Unknown error')}",
+                    }
+                    break
 
-                        data = line[6:]  # Remove "data: " prefix
+                if chunk_type == "thinking":
+                    # Model is processing the request (polling mode)
+                    yield {
+                        "type": "thinking",
+                        "task_id": chunk.get("task_id"),
+                    }
+                    continue
 
-                        if data == "[DONE]":
-                            break
+                # Handle streaming content (OpenAI format)
+                choices = chunk.get("choices", [])
+                if choices:
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        yield {
+                            "type": "content",
+                            "content": content,
+                        }
 
-                        try:
-                            import json
+                # Track usage if provided
+                usage = chunk.get("usage", {})
+                if usage:
+                    total_tokens = usage.get("total_tokens", 0)
 
-                            chunk = json.loads(data)
-                            delta = chunk.get("choices", [{}])[0].get("delta", {})
-                            content = delta.get("content", "")
-
-                            if content:
-                                yield {
-                                    "type": "content",
-                                    "content": content,
-                                }
-
-                            # Track tokens if provided
-                            usage = chunk.get("usage", {})
-                            if usage:
-                                total_tokens = usage.get("total_tokens", 0)
-
-                        except (json.JSONDecodeError, KeyError, IndexError):
-                            continue
-
-        except httpx.HTTPStatusError as e:
-            logger.error("LLM HTTP error: %s", e)
+        except LLMConnectionError as e:
+            logger.error("Cannot connect to sop_llm: %s", e)
             yield {
                 "type": "content",
                 "content": (
-                    "I apologize, but I encountered an error generating a response. "
-                    "Please try again."
+                    "Извините, сервис ИИ временно недоступен. "
+                    "Пожалуйста, попробуйте позже."
                 ),
-            }
-
-        except httpx.TimeoutException:
-            logger.error("LLM request timeout")
-            yield {
-                "type": "content",
-                "content": "The request timed out. Please try again with a shorter message.",
             }
 
         except Exception as e:
             logger.exception("Error streaming from LLM")
             yield {
                 "type": "content",
-                "content": f"An error occurred: {str(e)}",
+                "content": f"Произошла ошибка: {str(e)}",
             }
 
         # Yield metadata at the end
@@ -333,6 +356,7 @@ class ChatWorkflow:
         history: list[dict],
         context: dict | None = None,
         context_query: str | None = None,
+        sop_conversation_id: str | None = None,
     ) -> str:
         """Run the workflow and return the complete response.
 
@@ -343,14 +367,45 @@ class ChatWorkflow:
             history: Conversation history.
             context: Session context data.
             context_query: Optional RAG query.
+            sop_conversation_id: Optional sop_llm conversation ID.
 
         Returns:
             Complete response string.
         """
         response_parts = []
 
-        async for chunk in self.stream(message, history, context, context_query):
+        async for chunk in self.stream(
+            message, history, context, context_query, sop_conversation_id
+        ):
             if chunk.get("type") == "content":
                 response_parts.append(chunk.get("content", ""))
 
         return "".join(response_parts)
+
+    async def create_sop_conversation(
+        self,
+        system_prompt: str | None = None,
+        metadata: dict | None = None,
+    ) -> str | None:
+        """Create a new conversation in sop_llm.
+
+        Args:
+            system_prompt: System prompt for the conversation.
+            metadata: Additional metadata.
+
+        Returns:
+            conversation_id or None if failed.
+        """
+        try:
+            result = await self.llm_client.create_conversation(
+                system_prompt=system_prompt or (
+                    "Ты - полезный AI-ассистент для изучения с помощью карточек Anki."
+                ),
+                model=settings.sop_llm.default_model,
+                metadata=metadata,
+            )
+            return result.get("conversation_id")
+
+        except LLMConnectionError as e:
+            logger.warning("Cannot create sop_llm conversation: %s", e)
+            return None
