@@ -16,20 +16,19 @@ Usage:
     users = UserFactory.build_batch(10)
 """
 
-import factory
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from factory import LazyAttribute, LazyFunction, Sequence, SubFactory
+import factory
+from factory import LazyAttribute, LazyFunction, Sequence
 
-from src.shared.uuid7 import uuid7
 from src.core.security import hash_password
-from src.modules.users.models import User, UserPreferences
+from src.modules.chat.models import ChatMessage, ChatSession
 from src.modules.decks.models import Deck
 from src.modules.templates.models import CardTemplate, TemplateField
-from src.modules.chat.models import ChatSession, ChatMessage
-
+from src.modules.users.models import User, UserPreferences
+from src.shared.uuid7 import uuid7
 
 # ==================== Base Factory ====================
 
@@ -95,14 +94,14 @@ class UserFactory(AsyncSQLAlchemyFactory):
     display_name = Sequence(lambda n: f"Test User {n}")
     hashed_password = LazyFunction(lambda: hash_password("testpassword123"))
     is_active = True
-    created_at = LazyFunction(lambda: datetime.now(timezone.utc))
-    updated_at = LazyFunction(lambda: datetime.now(timezone.utc))
+    created_at = LazyFunction(lambda: datetime.now(UTC))
+    updated_at = LazyFunction(lambda: datetime.now(UTC))
     deleted_at = None
 
     class Params:
         inactive = factory.Trait(is_active=False)
         deleted = factory.Trait(
-            deleted_at=LazyFunction(lambda: datetime.now(timezone.utc))
+            deleted_at=LazyFunction(lambda: datetime.now(UTC))
         )
         with_weak_password = factory.Trait(
             hashed_password=LazyFunction(lambda: hash_password("weak"))
@@ -120,8 +119,8 @@ class UserPreferencesFactory(AsyncSQLAlchemyFactory):
     preferred_language = "en"
     default_model_id = None
     default_embedder_id = None
-    created_at = LazyFunction(lambda: datetime.now(timezone.utc))
-    updated_at = LazyFunction(lambda: datetime.now(timezone.utc))
+    created_at = LazyFunction(lambda: datetime.now(UTC))
+    updated_at = LazyFunction(lambda: datetime.now(UTC))
 
     class Params:
         russian = factory.Trait(preferred_language="ru")
@@ -143,15 +142,15 @@ class DeckFactory(AsyncSQLAlchemyFactory):
     owner_id = None  # Must be set explicitly
     parent_id = None
     anki_deck_id = None
-    created_at = LazyFunction(lambda: datetime.now(timezone.utc))
-    updated_at = LazyFunction(lambda: datetime.now(timezone.utc))
+    created_at = LazyFunction(lambda: datetime.now(UTC))
+    updated_at = LazyFunction(lambda: datetime.now(UTC))
     deleted_at = None
     created_by = None
     updated_by = None
 
     class Params:
         deleted = factory.Trait(
-            deleted_at=LazyFunction(lambda: datetime.now(timezone.utc))
+            deleted_at=LazyFunction(lambda: datetime.now(UTC))
         )
         synced = factory.Trait(
             anki_deck_id=Sequence(lambda n: 1000000 + n)
@@ -250,8 +249,8 @@ class ChatSessionFactory(AsyncSQLAlchemyFactory):
     user_id = None  # Must be set explicitly
     title = Sequence(lambda n: f"Chat Session {n}")
     context = None
-    created_at = LazyFunction(lambda: datetime.now(timezone.utc))
-    updated_at = LazyFunction(lambda: datetime.now(timezone.utc))
+    created_at = LazyFunction(lambda: datetime.now(UTC))
+    updated_at = LazyFunction(lambda: datetime.now(UTC))
 
     class Params:
         with_deck_context = factory.Trait(
@@ -273,8 +272,8 @@ class ChatMessageFactory(AsyncSQLAlchemyFactory):
     role = "user"
     content = Sequence(lambda n: f"Test message {n}")
     tokens = None
-    created_at = LazyFunction(lambda: datetime.now(timezone.utc))
-    updated_at = LazyFunction(lambda: datetime.now(timezone.utc))
+    created_at = LazyFunction(lambda: datetime.now(UTC))
+    updated_at = LazyFunction(lambda: datetime.now(UTC))
 
     class Params:
         assistant = factory.Trait(role="assistant")

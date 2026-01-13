@@ -6,14 +6,13 @@ Tests cover:
 - get_similar_cards (find_similar_cards) method
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.services.rag.schemas import CardStatus, SearchType
-
 
 # ==================== Fixtures ====================
 
@@ -81,7 +80,7 @@ def mock_search_result():
         status=CardStatus.DRAFT,
         similarity=0.95,
         content_text="Question: Question\nAnswer: Answer",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 

@@ -12,14 +12,6 @@ from src.core.config import settings
 from src.core.database import Base
 
 # Import all models to register them with Base.metadata
-from src.modules.users.models import User, UserPreferences
-from src.modules.decks.models import Deck
-from src.modules.cards.models import Card, CardGenerationInfo, CardEmbedding
-from src.modules.templates.models import CardTemplate, TemplateField
-from src.modules.prompts.models import Prompt, PromptExecution
-from src.services.llm.models import LLMModel, EmbeddingModel
-from src.modules.auth.models import RefreshToken
-from src.modules.chat.models import ChatSession, ChatMessage
 
 # Alembic Config object
 config = context.config

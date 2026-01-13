@@ -8,31 +8,13 @@ Tests cover:
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
-from src.core.security import (
-    TokenPayload,
-    TokenPair,
-    TokenType,
-    authenticate_user,
-    create_access_token,
-    create_refresh_token,
-    create_token,
-    create_token_pair,
-    decode_token,
-    extract_user_id,
-    hash_password,
-    needs_rehash,
-    verify_access_token,
-    verify_password,
-    verify_refresh_token,
-)
 from src.core.config import (
     AppConfig,
     DatabaseConfig,
@@ -81,7 +63,23 @@ from src.core.exceptions import (
     register_exception_handlers,
     unhandled_exception_handler,
 )
-
+from src.core.security import (
+    TokenPair,
+    TokenPayload,
+    TokenType,
+    authenticate_user,
+    create_access_token,
+    create_refresh_token,
+    create_token,
+    create_token_pair,
+    decode_token,
+    extract_user_id,
+    hash_password,
+    needs_rehash,
+    verify_access_token,
+    verify_password,
+    verify_refresh_token,
+)
 
 # ==================== Config Tests ====================
 
@@ -705,7 +703,7 @@ class TestTokenPayload:
 
     def test_token_payload_creation(self):
         """Test creating TokenPayload."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = TokenPayload(
             sub="user-123",
             type=TokenType.ACCESS,

@@ -12,12 +12,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.services.rag.embeddings import EmbeddingService
-
 from src.tests.fixtures.sample_data import (
     SAMPLE_DOCUMENTS,
-    SAMPLE_EMBEDDINGS,
 )
-
 
 # ==================== Embedding Service Tests ====================
 

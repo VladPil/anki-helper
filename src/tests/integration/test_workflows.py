@@ -8,25 +8,14 @@ Tests cover:
 - Error handling in workflows
 """
 
-import json
 from collections.abc import AsyncGenerator
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.modules.chat.service import ChatService
-from src.modules.chat.schemas import MessageRole
-from src.modules.users.models import User
 
 from src.tests.fixtures.sample_data import (
-    SAMPLE_CHAT_MESSAGES,
     SAMPLE_DOCUMENTS,
     SAMPLE_GENERATED_CARDS,
 )
-
 
 # ==================== Mock Workflow Components ====================
 

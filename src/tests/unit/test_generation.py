@@ -10,9 +10,6 @@ Tests cover:
 
 import json
 from collections.abc import AsyncGenerator
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
 
 import pytest
 
@@ -20,7 +17,6 @@ from src.tests.fixtures.sample_data import (
     SAMPLE_GENERATED_CARDS,
     SAMPLE_GENERATION_REQUESTS,
 )
-
 
 # ==================== Mock LLM Client ====================
 
@@ -76,7 +72,7 @@ class TestCardGenerationBasic:
         mock_client = MockLLMClient()
 
         # Simulate generation workflow
-        prompt = f"Generate 3 flashcards about Japanese particles"
+        prompt = "Generate 3 flashcards about Japanese particles"
         response = await mock_client.generate(prompt)
 
         cards = json.loads(response)

@@ -2,8 +2,7 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel
@@ -13,7 +12,6 @@ from sqlalchemy.orm import DeclarativeBase
 
 from src.shared.repository import BaseRepository, ReadOnlyRepository
 from src.shared.schemas import PaginatedResponse, PaginationParams
-
 
 # ==================== Test Models ====================
 

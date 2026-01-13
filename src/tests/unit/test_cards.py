@@ -11,14 +11,11 @@ Note: Since the codebase has DeckService but cards are managed through decks,
 this file tests deck operations primarily.
 """
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.decks.models import Deck
 from src.modules.decks.schemas import DeckCreate, DeckUpdate
 from src.modules.decks.service import (
     DeckAccessDeniedError,
@@ -27,9 +24,7 @@ from src.modules.decks.service import (
     DeckService,
 )
 from src.modules.users.models import User
-
-from src.tests.factories import DeckFactory, UserFactory
-
+from src.tests.factories import UserFactory
 
 # ==================== Deck Creation Tests ====================
 

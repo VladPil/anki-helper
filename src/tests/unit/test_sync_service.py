@@ -14,7 +14,6 @@ import json
 import sqlite3
 import tempfile
 import zipfile
-from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -33,7 +32,6 @@ from src.modules.sync.schemas import (
     SyncState,
 )
 from src.modules.sync.service import SyncJobNotFoundError, SyncService
-
 
 # ==================== Fixtures ====================
 

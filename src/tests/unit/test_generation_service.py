@@ -10,9 +10,8 @@ Tests cover:
 - Job listing (list_jobs)
 """
 
-import json
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,7 +25,6 @@ from src.modules.generation.schemas import (
     GenerationStatus,
 )
 from src.modules.generation.service import GenerationService
-
 
 # ==================== Fixtures ====================
 

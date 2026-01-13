@@ -3,19 +3,19 @@
 These tests use unittest.mock to mock AsyncSession and avoid real database interactions.
 """
 
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
+
+from src.modules.decks.schemas import DeckCreate, DeckUpdate
 from src.modules.decks.service import (
-    DeckService,
-    DeckNotFoundError,
     DeckAccessDeniedError,
     DeckCircularReferenceError,
+    DeckNotFoundError,
+    DeckService,
 )
-from src.modules.decks.schemas import DeckCreate, DeckUpdate
-
 
 # ==================== Fixtures ====================
 
@@ -56,8 +56,8 @@ def sample_deck(sample_user_id):
     deck.parent_id = None
     deck.anki_deck_id = None
     deck.deleted_at = None
-    deck.created_at = datetime.now(timezone.utc)
-    deck.updated_at = datetime.now(timezone.utc)
+    deck.created_at = datetime.now(UTC)
+    deck.updated_at = datetime.now(UTC)
     deck.children = []
     deck.cards = []
     return deck
@@ -74,8 +74,8 @@ def sample_child_deck(sample_user_id, sample_deck):
     child.parent_id = sample_deck.id
     child.anki_deck_id = None
     child.deleted_at = None
-    child.created_at = datetime.now(timezone.utc)
-    child.updated_at = datetime.now(timezone.utc)
+    child.created_at = datetime.now(UTC)
+    child.updated_at = datetime.now(UTC)
     child.children = []
     child.cards = []
     return child
@@ -197,7 +197,7 @@ async def test_get_by_id_returns_none(deck_service, mock_session):
 @pytest.mark.asyncio
 async def test_get_by_id_excludes_deleted(deck_service, mock_session, sample_deck):
     """Test get_by_id excludes deleted decks by default."""
-    sample_deck.deleted_at = datetime.now(timezone.utc)
+    sample_deck.deleted_at = datetime.now(UTC)
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = None  # Excluded by query
@@ -211,7 +211,7 @@ async def test_get_by_id_excludes_deleted(deck_service, mock_session, sample_dec
 @pytest.mark.asyncio
 async def test_get_by_id_include_deleted(deck_service, mock_session, sample_deck):
     """Test get_by_id includes deleted decks when requested."""
-    sample_deck.deleted_at = datetime.now(timezone.utc)
+    sample_deck.deleted_at = datetime.now(UTC)
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = sample_deck
@@ -545,7 +545,7 @@ async def test_delete_deck_with_children(
 @pytest.mark.asyncio
 async def test_restore_deck_success(deck_service, mock_session, sample_deck, sample_user_id):
     """Test successful deck restoration."""
-    sample_deck.deleted_at = datetime.now(timezone.utc)
+    sample_deck.deleted_at = datetime.now(UTC)
 
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = sample_deck

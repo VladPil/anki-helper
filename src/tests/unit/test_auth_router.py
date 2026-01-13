@@ -1,10 +1,10 @@
 """Unit tests for authentication router endpoints."""
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -47,8 +47,8 @@ def mock_token_response():
 @pytest.fixture
 def app_with_mocked_db():
     """Create app with mocked database dependency."""
-    from src.main import create_app
     from src.core.database import get_db
+    from src.main import create_app
 
     app = create_app()
 

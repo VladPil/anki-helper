@@ -3,8 +3,7 @@
 import asyncio
 import os
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
@@ -20,7 +19,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from src.core.database import Base, get_db
-from src.core.dependencies import get_current_user_id, get_redis, get_token_blacklist
+from src.core.dependencies import get_current_user_id, get_redis
 from src.core.security import TokenType, create_token, hash_password
 from src.modules.users.models import User, UserPreferences
 
@@ -648,7 +647,7 @@ def create_test_uuid(index: int = 0) -> UUID:
 
 def assert_datetime_recent(dt: datetime, seconds: int = 10) -> None:
     """Assert that a datetime is recent (within specified seconds)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     delta = abs((now - dt).total_seconds())
     assert delta < seconds, f"Datetime {dt} is not recent (delta: {delta}s)"
 

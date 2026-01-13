@@ -3,20 +3,20 @@
 These tests use unittest.mock to mock AsyncSession and avoid real database interactions.
 """
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-from src.modules.chat.service import ChatService, ChatSessionNotFoundError
+import pytest
+
+from src.core.exceptions import ResourceOwnershipError
 from src.modules.chat.schemas import (
+    ChatMessageCreate,
     ChatSessionCreate,
     ChatSessionUpdate,
-    ChatMessageCreate,
     MessageRole,
 )
-from src.core.exceptions import ResourceOwnershipError
-
+from src.modules.chat.service import ChatService, ChatSessionNotFoundError
 
 # ==================== Fixtures ====================
 
@@ -36,9 +36,9 @@ def mock_session():
         if not hasattr(obj, "id") or obj.id is None:
             obj.id = uuid4()
         if not hasattr(obj, "created_at") or obj.created_at is None:
-            obj.created_at = datetime.now(timezone.utc)
+            obj.created_at = datetime.now(UTC)
         if not hasattr(obj, "updated_at") or obj.updated_at is None:
-            obj.updated_at = datetime.now(timezone.utc)
+            obj.updated_at = datetime.now(UTC)
 
     session.refresh = AsyncMock(side_effect=mock_refresh)
     return session
@@ -70,8 +70,8 @@ def sample_chat_session(sample_user_id):
     session.user_id = sample_user_id
     session.title = "Test Chat Session"
     session.context = {"deck_id": str(uuid4())}
-    session.created_at = datetime.now(timezone.utc)
-    session.updated_at = datetime.now(timezone.utc)
+    session.created_at = datetime.now(UTC)
+    session.updated_at = datetime.now(UTC)
     session.messages = []
     return session
 
@@ -85,8 +85,8 @@ def sample_chat_message(sample_chat_session):
     message.role = "user"
     message.content = "Test message content"
     message.tokens = 10
-    message.created_at = datetime.now(timezone.utc)
-    message.updated_at = datetime.now(timezone.utc)
+    message.created_at = datetime.now(UTC)
+    message.updated_at = datetime.now(UTC)
     return message
 
 
@@ -99,8 +99,8 @@ def sample_assistant_message(sample_chat_session):
     message.role = "assistant"
     message.content = "Test assistant response"
     message.tokens = 20
-    message.created_at = datetime.now(timezone.utc)
-    message.updated_at = datetime.now(timezone.utc)
+    message.created_at = datetime.now(UTC)
+    message.updated_at = datetime.now(UTC)
     return message
 
 
@@ -814,16 +814,16 @@ async def test_list_sessions_returns_sessions_with_correct_message_count(
     session1.user_id = sample_user_id
     session1.title = "Session 1"
     session1.context = None
-    session1.created_at = datetime.now(timezone.utc)
-    session1.updated_at = datetime.now(timezone.utc)
+    session1.created_at = datetime.now(UTC)
+    session1.updated_at = datetime.now(UTC)
 
     session2 = MagicMock()
     session2.id = uuid4()
     session2.user_id = sample_user_id
     session2.title = "Session 2"
     session2.context = None
-    session2.created_at = datetime.now(timezone.utc)
-    session2.updated_at = datetime.now(timezone.utc)
+    session2.created_at = datetime.now(UTC)
+    session2.updated_at = datetime.now(UTC)
 
     count_result = MagicMock()
     count_result.scalar.return_value = 2

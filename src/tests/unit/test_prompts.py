@@ -8,14 +8,11 @@ Tests cover:
 - Card template operations
 """
 
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.templates.models import CardTemplate, TemplateField
 from src.modules.templates.schemas import TemplateCreate, TemplateFieldCreate, TemplateUpdate
 from src.modules.templates.service import (
     SystemTemplateModificationError,
@@ -24,10 +21,7 @@ from src.modules.templates.service import (
     TemplateService,
 )
 from src.modules.users.models import User
-
-from src.tests.factories import CardTemplateFactory, TemplateFieldFactory, UserFactory
 from src.tests.fixtures.sample_data import SAMPLE_PROMPTS, SAMPLE_TEMPLATE_DATA
-
 
 # ==================== Template Service Tests ====================
 

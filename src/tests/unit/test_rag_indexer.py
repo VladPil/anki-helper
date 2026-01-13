@@ -7,14 +7,12 @@ Tests cover:
 - update_card_index (index_card with force=True)
 """
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.services.rag.indexer import CardIndexer
-
 
 # ==================== Fixtures ====================
 

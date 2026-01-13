@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from fastapi import HTTPException, Request, status
 

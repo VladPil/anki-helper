@@ -6,13 +6,13 @@ Tests cover:
 - Status transitions
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
-from src.modules.cards.models import Card, CardGenerationInfo, CardStatus
+from src.modules.cards.models import Card, CardStatus
 from src.modules.cards.schemas import CardBulkItem, CardCreate, CardUpdate
 from src.modules.cards.service import (
     CardNotFoundError,
@@ -20,7 +20,6 @@ from src.modules.cards.service import (
     DeckNotFoundError,
     InvalidCardStatusTransitionError,
 )
-
 
 # ==================== Fixtures ====================
 
@@ -81,8 +80,8 @@ def sample_card(sample_card_id, sample_deck_id, sample_template_id):
     card.deleted_at = None
     card.anki_card_id = None
     card.anki_note_id = None
-    card.created_at = datetime.now(timezone.utc)
-    card.updated_at = datetime.now(timezone.utc)
+    card.created_at = datetime.now(UTC)
+    card.updated_at = datetime.now(UTC)
     return card
 
 
@@ -345,7 +344,7 @@ class TestCardServiceGet:
         sample_card,
     ):
         """Test card retrieval including deleted cards."""
-        sample_card.deleted_at = datetime.now(timezone.utc)
+        sample_card.deleted_at = datetime.now(UTC)
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = sample_card
         mock_session.execute.return_value = mock_result
@@ -959,7 +958,7 @@ class TestCardServiceRestore:
         sample_card,
     ):
         """Test restoring a soft-deleted card."""
-        sample_card.deleted_at = datetime.now(timezone.utc)
+        sample_card.deleted_at = datetime.now(UTC)
 
         with patch.object(
             card_service, "get_by_id_for_user", return_value=sample_card

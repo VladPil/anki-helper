@@ -4,21 +4,14 @@ This module provides fixtures for unit testing with mocked dependencies.
 It imports all SQLAlchemy models to ensure mapper initialization happens correctly.
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
+
 # Import all models to ensure SQLAlchemy mapper is properly configured
 # This is needed because models reference each other through relationships
-from src.modules.users.models import User, UserPreferences
-from src.modules.auth.models import RefreshToken
-from src.modules.decks.models import Deck
-from src.modules.cards.models import Card
-from src.modules.templates.models import CardTemplate
-from src.modules.chat.models import ChatSession, ChatMessage
-from src.services.llm.models import LLMModel, EmbeddingModel
-from src.modules.prompts.models import Prompt, PromptExecution
 
 
 @pytest.fixture
@@ -55,8 +48,8 @@ def sample_user_mock():
     user.hashed_password = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.S.9gZFMGbPCNry"
     user.is_active = True
     user.deleted_at = None
-    user.created_at = datetime.now(timezone.utc)
-    user.updated_at = datetime.now(timezone.utc)
+    user.created_at = datetime.now(UTC)
+    user.updated_at = datetime.now(UTC)
     user.preferences = MagicMock()
     user.preferences.preferred_language = "ru"
     return user
@@ -73,8 +66,8 @@ def sample_deck_mock(sample_user_id):
     deck.parent_id = None
     deck.anki_deck_id = None
     deck.deleted_at = None
-    deck.created_at = datetime.now(timezone.utc)
-    deck.updated_at = datetime.now(timezone.utc)
+    deck.created_at = datetime.now(UTC)
+    deck.updated_at = datetime.now(UTC)
     deck.children = []
     deck.cards = []
     return deck
@@ -87,7 +80,7 @@ def sample_refresh_token_mock(sample_user_id):
     token.id = uuid4()
     token.user_id = sample_user_id
     token.token = "test_refresh_token_string_123"
-    token.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    token.expires_at = datetime.now(UTC) + timedelta(days=7)
     token.revoked_at = None
     token.is_revoked = False
     token.is_expired = False

@@ -6,7 +6,7 @@ Tests cover:
 - hybrid_search (_hybrid_search) method
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -14,7 +14,6 @@ import pytest
 
 from src.services.rag.retriever import CardRetriever
 from src.services.rag.schemas import CardStatus, SearchResult, SearchType
-
 
 # ==================== Fixtures ====================
 
@@ -60,7 +59,7 @@ def create_search_result(
         status=status,
         similarity=similarity,
         content_text="Question: Question\nAnswer: Answer",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
@@ -81,7 +80,7 @@ def sample_search_results():
             status="draft",
             similarity=0.95,
             content_text="Question: Question 1\nAnswer: Answer 1",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         ),
         MagicMock(
             card_id=card_id_2,
@@ -92,7 +91,7 @@ def sample_search_results():
             status="approved",
             similarity=0.85,
             content_text="Question: Question 2\nAnswer: Answer 2",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         ),
     ]
 
@@ -359,7 +358,7 @@ class TestSearchByText:
                 status="draft",
                 similarity=0.8,  # Will be normalized
                 content_text="Q1 A1",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             ),
             MagicMock(
                 card_id=uuid4(),
@@ -370,7 +369,7 @@ class TestSearchByText:
                 status="draft",
                 similarity=0.4,  # Will be normalized
                 content_text="Q2 A2",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             ),
         ]
 
@@ -567,7 +566,7 @@ class TestFindSimilarToCard:
                 status="draft",
                 similarity=0.9,
                 content_text="Similar Q Similar A",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             ),
         ]
         mock_result_similar = MagicMock()

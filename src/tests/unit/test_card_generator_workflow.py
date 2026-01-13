@@ -9,12 +9,11 @@ Tests cover:
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.services.llm.client import FactCheckResult, LLMResponse
-
 
 # ==================== Mock LLM Client ====================
 

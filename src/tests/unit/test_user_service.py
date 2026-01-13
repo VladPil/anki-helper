@@ -3,18 +3,18 @@
 These tests use unittest.mock to mock AsyncSession and avoid real database interactions.
 """
 
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
+
+from src.modules.users.schemas import UserCreate, UserPreferencesUpdate, UserUpdate
 from src.modules.users.service import (
-    UserService,
     UserAlreadyExistsError,
     UserNotFoundError,
+    UserService,
 )
-from src.modules.users.schemas import UserCreate, UserUpdate, UserPreferencesUpdate
-
 
 # ==================== Fixtures ====================
 
@@ -48,8 +48,8 @@ def sample_user():
     user.hashed_password = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.S.9gZFMGbPCNry"
     user.is_active = True
     user.deleted_at = None
-    user.created_at = datetime.now(timezone.utc)
-    user.updated_at = datetime.now(timezone.utc)
+    user.created_at = datetime.now(UTC)
+    user.updated_at = datetime.now(UTC)
     user.preferences = MagicMock()
     user.preferences.preferred_language = "ru"
     return user

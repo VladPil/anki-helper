@@ -9,14 +9,12 @@ Tests cover:
 """
 
 from datetime import timedelta
-from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import (
-    AuthenticationError,
     InvalidCredentialsError,
     TokenExpiredError,
     TokenInvalidError,
@@ -37,10 +35,7 @@ from src.core.security import (
 )
 from src.modules.users.models import User
 from src.modules.users.service import UserAlreadyExistsError, UserNotFoundError, UserService
-
-from src.tests.factories import UserFactory
-from src.tests.fixtures.sample_data import SAMPLE_LOGIN_DATA, SAMPLE_USER_DATA
-
+from src.tests.fixtures.sample_data import SAMPLE_USER_DATA
 
 # ==================== Password Hashing Tests ====================
 

@@ -10,10 +10,9 @@ Usage:
     response = await client.post("/auth/register", json=SAMPLE_USER_DATA["valid"])
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
-
 
 # ==================== User Data ====================
 
@@ -523,7 +522,7 @@ TEST_UUIDS: dict[str, UUID] = {
 
 
 SAMPLE_TIMESTAMPS: dict[str, datetime] = {
-    "now": datetime.now(timezone.utc),
-    "past": datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
-    "future": datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
+    "now": datetime.now(UTC),
+    "past": datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
+    "future": datetime(2030, 12, 31, 23, 59, 59, tzinfo=UTC),
 }

@@ -10,12 +10,16 @@ Tests cover:
 - Error handling
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
+from src.core.exceptions import (
+    LLMServiceError,
+    PerplexityError,
+    RateLimitError,
+)
 from src.services.llm.client import (
     EmbeddingResponse,
     FactCheckResult,
@@ -25,12 +29,6 @@ from src.services.llm.client import (
     close_llm_client,
     get_llm_client,
 )
-from src.core.exceptions import (
-    LLMServiceError,
-    PerplexityError,
-    RateLimitError,
-)
-
 
 # ==================== SopLLMClient Tests ====================
 

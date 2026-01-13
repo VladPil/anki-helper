@@ -18,6 +18,9 @@ from typing import Any
 
 from loguru import logger
 
+# Import shared context for error handling trace_id
+from src.shared.context import trace_id_var as _shared_trace_id_var
+
 # Re-export from shared module
 from src.shared.logging import (
     InterceptHandler,
@@ -32,9 +35,6 @@ from src.shared.logging import (
     log_llm_response,
     setup_logger,
 )
-
-# Import shared context for error handling trace_id
-from src.shared.context import trace_id_var as _shared_trace_id_var
 
 # ==================== Context Variables ====================
 # Kept for backwards compatibility with existing code

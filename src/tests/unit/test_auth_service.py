@@ -3,13 +3,15 @@
 These tests use unittest.mock to mock AsyncSession and avoid real database interactions.
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import jwt
+import pytest
 
+from src.core.config import settings
+from src.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
 from src.modules.auth.service import (
     AuthService,
     InvalidCredentialsError,
@@ -17,9 +19,6 @@ from src.modules.auth.service import (
     TokenRevokedError,
     UserInactiveError,
 )
-from src.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
-from src.core.config import settings
-
 
 # ==================== Fixtures ====================
 
@@ -53,8 +52,8 @@ def sample_user():
     user.hashed_password = "$2b$12$test_hashed_password"
     user.is_active = True
     user.deleted_at = None
-    user.created_at = datetime.now(timezone.utc)
-    user.updated_at = datetime.now(timezone.utc)
+    user.created_at = datetime.now(UTC)
+    user.updated_at = datetime.now(UTC)
     user.preferences = MagicMock()
     return user
 
@@ -66,7 +65,7 @@ def sample_refresh_token(sample_user):
     token.id = uuid4()
     token.user_id = sample_user.id
     token.token = "test_refresh_token_string_123"
-    token.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    token.expires_at = datetime.now(UTC) + timedelta(days=7)
     token.revoked_at = None
     token.is_revoked = False
     token.is_expired = False
@@ -391,8 +390,8 @@ def test_verify_token_wrong_type(auth_service, sample_user):
     # Create a token with wrong type
     payload = {
         "sub": str(sample_user.id),
-        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
-        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(UTC) + timedelta(hours=1),
+        "iat": datetime.now(UTC),
         "type": "refresh",  # Wrong type
     }
     token = jwt.encode(payload, settings.jwt.secret_key, algorithm=auth_service.algorithm)

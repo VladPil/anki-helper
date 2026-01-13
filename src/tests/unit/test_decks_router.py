@@ -1,10 +1,10 @@
 """Unit tests for decks router endpoints."""
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -74,8 +74,8 @@ def mock_deck_with_children(mock_user_id):
 @pytest.fixture
 def app_with_mocked_db():
     """Create app with mocked database dependency."""
-    from src.main import create_app
     from src.core.database import get_db
+    from src.main import create_app
 
     app = create_app()
 
@@ -94,7 +94,7 @@ class TestCreateDeckEndpoint:
 
     def test_create_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful deck creation."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.create.return_value = mock_deck
@@ -119,7 +119,7 @@ class TestCreateDeckEndpoint:
 
     def test_create_deck_with_parent(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test creating a deck with a parent."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         parent_id = uuid4()
         mock_deck.parent_id = parent_id
@@ -144,7 +144,7 @@ class TestCreateDeckEndpoint:
 
     def test_create_deck_parent_not_found(self, app_with_mocked_db, mock_user_id):
         """Test creating deck with non-existent parent returns 404."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         parent_id = uuid4()
 
@@ -168,7 +168,7 @@ class TestCreateDeckEndpoint:
 
     def test_create_deck_parent_access_denied(self, app_with_mocked_db, mock_user_id):
         """Test creating deck with inaccessible parent returns 403."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         parent_id = uuid4()
 
@@ -228,7 +228,7 @@ class TestListDecksEndpoint:
 
     def test_list_decks_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test listing user's decks."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.list_by_owner.return_value = ([mock_deck], 1)
@@ -248,7 +248,7 @@ class TestListDecksEndpoint:
 
     def test_list_decks_with_pagination(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test listing decks with pagination."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.list_by_owner.return_value = ([mock_deck], 10)
@@ -267,7 +267,7 @@ class TestListDecksEndpoint:
 
     def test_list_root_decks_only(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test listing only root decks."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.list_root_decks.return_value = ([mock_deck], 1)
@@ -284,7 +284,7 @@ class TestListDecksEndpoint:
 
     def test_list_decks_empty(self, app_with_mocked_db, mock_user_id):
         """Test listing decks when user has none."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.list_by_owner.return_value = ([], 0)
@@ -307,7 +307,7 @@ class TestGetDeckEndpoint:
 
     def test_get_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test getting a specific deck."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.get_by_id_for_user.return_value = mock_deck
@@ -325,7 +325,7 @@ class TestGetDeckEndpoint:
 
     def test_get_deck_not_found(self, app_with_mocked_db, mock_user_id):
         """Test getting non-existent deck returns 404."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         deck_id = uuid4()
 
@@ -347,7 +347,7 @@ class TestUpdateDeckEndpoint:
 
     def test_update_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful deck update."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         updated_deck = MagicMock()
         updated_deck.id = mock_deck.id
@@ -378,7 +378,7 @@ class TestUpdateDeckEndpoint:
 
     def test_update_deck_not_found(self, app_with_mocked_db, mock_user_id):
         """Test updating non-existent deck returns 404."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         deck_id = uuid4()
 
@@ -399,7 +399,7 @@ class TestUpdateDeckEndpoint:
 
     def test_update_deck_circular_reference(self, app_with_mocked_db, mock_user_id):
         """Test updating deck with circular reference returns 400."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         deck_id = uuid4()
         parent_id = uuid4()
@@ -425,7 +425,7 @@ class TestDeleteDeckEndpoint:
 
     def test_delete_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful soft delete."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.delete.return_value = True
@@ -443,7 +443,7 @@ class TestDeleteDeckEndpoint:
 
     def test_delete_deck_hard_delete(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test hard delete."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.delete.return_value = True
@@ -462,7 +462,7 @@ class TestDeleteDeckEndpoint:
 
     def test_delete_deck_not_found(self, app_with_mocked_db, mock_user_id):
         """Test deleting non-existent deck returns 404."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         deck_id = uuid4()
 
@@ -484,7 +484,7 @@ class TestGetDeckTreeEndpoint:
 
     def test_get_deck_tree_success(self, app_with_mocked_db, mock_user_id, mock_deck_with_children):
         """Test getting deck hierarchy tree."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.get_deck_tree.return_value = [mock_deck_with_children]
@@ -508,7 +508,7 @@ class TestRestoreDeckEndpoint:
 
     def test_restore_deck_success(self, app_with_mocked_db, mock_user_id, mock_deck):
         """Test successful deck restoration."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         mock_service = AsyncMock(spec=DeckService)
         mock_service.restore.return_value = mock_deck
@@ -524,7 +524,7 @@ class TestRestoreDeckEndpoint:
 
     def test_restore_deck_not_found(self, app_with_mocked_db, mock_user_id):
         """Test restoring non-existent deck returns 404."""
-        from src.modules.decks.router import get_deck_service, get_current_user_id
+        from src.modules.decks.router import get_current_user_id, get_deck_service
 
         deck_id = uuid4()
 

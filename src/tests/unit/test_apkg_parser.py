@@ -15,18 +15,14 @@ import tempfile
 import zipfile
 from io import BytesIO
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 
 import pytest
 
 from src.modules.sync.apkg_parser import (
-    ApkgParser,
     ApkgParseError,
-    ParsedCard,
+    ApkgParser,
     ParsedDeck,
-    ParsedNoteType,
 )
-
 
 # ==================== Fixtures ====================
 

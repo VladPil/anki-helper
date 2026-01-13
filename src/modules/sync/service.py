@@ -15,7 +15,6 @@ from src.shared.uuid7 import uuid7
 
 from .apkg_parser import ApkgParser
 from .schemas import (
-    AgentImportCard,
     AgentImportRequest,
     AgentImportResult,
     CardSyncState,

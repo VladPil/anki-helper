@@ -9,24 +9,19 @@ Tests cover:
 - Error handling
 """
 
-import json
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
+
+from datetime import UTC
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.decks.models import Deck
 from src.modules.users.models import User
-
 from src.tests.factories import DeckFactory
 from src.tests.fixtures.sample_data import (
     SAMPLE_ANKI_DECKS,
     SAMPLE_ANKI_NOTES,
     SAMPLE_CARD_DATA,
 )
-
 
 # ==================== Mock AnkiConnect Client ====================
 
@@ -622,19 +617,19 @@ class TestSyncStatus:
 
     async def test_track_sync_timestamp(self):
         """Test tracking last sync timestamp."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         client = MockAnkiConnectClient()
 
         # Record sync start
-        sync_start = datetime.now(timezone.utc)
+        sync_start = datetime.now(UTC)
 
         # Perform sync operations
         await client.get_deck_names()
         await client.sync()
 
         # Record sync end
-        sync_end = datetime.now(timezone.utc)
+        sync_end = datetime.now(UTC)
 
         # Verify timing
         assert sync_end >= sync_start

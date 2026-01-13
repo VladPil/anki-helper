@@ -7,8 +7,7 @@ Tests cover:
 - Prompt versioning
 """
 
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -23,7 +22,6 @@ from src.modules.prompts.service import (
     PromptService,
     PromptValidationError,
 )
-
 
 # ==================== Fixtures ====================
 
@@ -97,8 +95,8 @@ def sample_prompt(sample_prompt_id, sample_model_id, sample_variables_schema):
     prompt.is_active = True
     prompt.version = 1
     prompt.parent_id = None
-    prompt.created_at = datetime.now(timezone.utc)
-    prompt.updated_at = datetime.now(timezone.utc)
+    prompt.created_at = datetime.now(UTC)
+    prompt.updated_at = datetime.now(UTC)
     prompt.created_by = None
     prompt.updated_by = None
     return prompt
@@ -127,7 +125,7 @@ def sample_prompt_execution(sample_prompt_id, sample_user_id, sample_model_id):
     execution.output_tokens = 500
     execution.latency_ms = 1500
     execution.trace_id = "trace-123"
-    execution.created_at = datetime.now(timezone.utc)
+    execution.created_at = datetime.now(UTC)
     return execution
 
 

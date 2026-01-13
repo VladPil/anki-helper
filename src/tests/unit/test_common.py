@@ -7,18 +7,14 @@ Tests cover:
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
 
-from src.shared.uuid7 import UUID7, uuid7
 from src.shared.mixins import (
     AuditMixin,
-    FullMixin,
     SoftDeleteMixin,
-    TimestampMixin,
-    UUIDMixin,
 )
 from src.shared.schemas import (
     BaseSchema,
@@ -33,7 +29,7 @@ from src.shared.schemas import (
     UUIDSchema,
     UUIDTimestampSchema,
 )
-
+from src.shared.uuid7 import UUID7, uuid7
 
 # ==================== UUID7 Tests ====================
 
@@ -154,7 +150,7 @@ class TestSoftDeleteMixin:
             pass
 
         model = TestModel()
-        model.deleted_at = datetime.now(timezone.utc)
+        model.deleted_at = datetime.now(UTC)
         assert model.is_deleted is True
 
     def test_soft_delete_sets_timestamp(self):
@@ -176,7 +172,7 @@ class TestSoftDeleteMixin:
             pass
 
         model = TestModel()
-        model.deleted_at = datetime.now(timezone.utc)
+        model.deleted_at = datetime.now(UTC)
         model.restore()
         assert model.deleted_at is None
 
@@ -452,7 +448,7 @@ class TestSoftDeleteSchema:
 
     def test_deleted(self):
         """Test is_deleted when deleted_at is set."""
-        schema = SoftDeleteSchema(deleted_at=datetime.now(timezone.utc))
+        schema = SoftDeleteSchema(deleted_at=datetime.now(UTC))
         assert schema.is_deleted is True
 
 
@@ -490,7 +486,7 @@ class TestTimestampSchema:
 
     def test_timestamp_fields(self):
         """Test timestamp fields."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         schema = TimestampSchema(created_at=now, updated_at=now)
         assert schema.created_at == now
         assert schema.updated_at == now
@@ -502,7 +498,7 @@ class TestUUIDTimestampSchema:
     def test_combined_fields(self):
         """Test combined UUID and timestamp fields."""
         test_id = uuid.uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         schema = UUIDTimestampSchema(id=test_id, created_at=now, updated_at=now)
 
         assert schema.id == test_id

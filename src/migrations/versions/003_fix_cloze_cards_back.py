@@ -18,7 +18,6 @@ import re
 from alembic import op
 from sqlalchemy import text
 
-
 # revision identifiers, used by Alembic.
 revision = "003_fix_cloze_cards_back"
 down_revision = "002_add_sync_fields"

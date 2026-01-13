@@ -7,8 +7,8 @@ Create Date: 2026-01-13
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "002_add_sync_fields"
 down_revision: str | None = "001_initial"

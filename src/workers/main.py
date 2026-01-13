@@ -7,12 +7,14 @@ It initializes all task handlers and starts the worker.
 from __future__ import annotations
 
 from src.core.logging import setup_logging
-from src.workers.broker import app
 
 # Import task handlers to register them with the broker
-from src.workers import generation  # noqa: F401
-from src.workers import indexing  # noqa: F401
-from src.workers import sync  # noqa: F401
+from src.workers import (
+    generation,  # noqa: F401
+    indexing,  # noqa: F401
+    sync,  # noqa: F401
+)
+from src.workers.broker import app
 
 
 @app.on_startup

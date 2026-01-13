@@ -7,7 +7,7 @@ Tests cover:
 - get_fields operation
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -21,7 +21,6 @@ from src.modules.templates.service import (
     TemplateNotFoundError,
     TemplateService,
 )
-
 
 # ==================== Fixtures ====================
 
@@ -77,8 +76,8 @@ def sample_template(sample_template_id, sample_owner_id):
     template.is_system = False
     template.owner_id = sample_owner_id
     template.fields = []
-    template.created_at = datetime.now(timezone.utc)
-    template.updated_at = datetime.now(timezone.utc)
+    template.created_at = datetime.now(UTC)
+    template.updated_at = datetime.now(UTC)
     return template
 
 
@@ -96,8 +95,8 @@ def sample_system_template(sample_template_id):
     template.is_system = True
     template.owner_id = None
     template.fields = []
-    template.created_at = datetime.now(timezone.utc)
-    template.updated_at = datetime.now(timezone.utc)
+    template.created_at = datetime.now(UTC)
+    template.updated_at = datetime.now(UTC)
     return template
 
 

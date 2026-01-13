@@ -9,19 +9,14 @@ Tests cover:
 - Error responses
 """
 
-from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
 
 from src.modules.users.models import User
-
 from src.tests.fixtures.sample_data import (
     SAMPLE_DECK_DATA,
-    SAMPLE_LOGIN_DATA,
-    SAMPLE_USER_DATA,
 )
-
 
 # ==================== Health Check Tests ====================
 
