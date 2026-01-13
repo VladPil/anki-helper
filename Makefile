@@ -1,4 +1,4 @@
-.PHONY: help init check-env up down restart ps build logs dev dev-frontend dev-agent test lint migrate clean
+.PHONY: help init check-env up down restart ps build logs logs-nginx dev dev-frontend dev-agent test lint migrate clean shell-nginx
 
 # =============================================================================
 # Конфигурация
@@ -46,9 +46,11 @@ help:
 	@echo "  make init              Создать .env из шаблона"
 	@echo ""
 	@echo "$(GREEN)Docker (требуется .env):$(NC)"
-	@echo "  make up                Запустить все (backend + frontend + infra)"
+	@echo "  make up                Запустить все (backend + nginx + infra)"
 	@echo "  make up-infra          Только инфраструктура (postgres, redis)"
 	@echo "  make up-backend        Backend + инфраструктура"
+	@echo "  make up-frontend       Nginx + frontend (статика)"
+	@echo "  make rebuild-frontend  Пересобрать frontend"
 	@echo "  make up-monitoring     Добавить мониторинг"
 	@echo "  make down              Остановить все"
 	@echo "  make restart           Перезапустить"
@@ -60,10 +62,14 @@ help:
 	@echo "  make dev-frontend      Frontend (vite)"
 	@echo "  make dev-agent         Local-agent (PyQt6)"
 	@echo ""
+	@echo "$(GREEN)Workers (FastStream):$(NC)"
+	@echo "  make worker            Запустить FastStream worker"
+	@echo "  make worker-dev        Worker с hot-reload"
+	@echo ""
 	@echo "$(GREEN)Логи:$(NC)"
 	@echo "  make logs              Все логи"
 	@echo "  make logs-backend      Backend"
-	@echo "  make logs-frontend     Frontend"
+	@echo "  make logs-nginx        Nginx"
 	@echo "  make logs-db           PostgreSQL"
 	@echo ""
 	@echo "$(GREEN)База данных:$(NC)"
@@ -124,8 +130,14 @@ up-backend: check-env
 	$(DC) up -d postgres redis backend
 
 up-frontend: check-env
-	@echo "$(GREEN)Запуск frontend...$(NC)"
-	$(DC) up -d frontend
+	@echo "$(GREEN)Запуск nginx (frontend)...$(NC)"
+	$(DC) up -d frontend-builder nginx
+
+rebuild-frontend: check-env
+	@echo "$(GREEN)Пересборка frontend...$(NC)"
+	$(DC) build frontend-builder
+	$(DC) up -d frontend-builder
+	$(DC) restart nginx
 
 up-monitoring: check-env
 	@echo "$(GREEN)Запуск мониторинга...$(NC)"
@@ -163,6 +175,19 @@ dev-agent: check-env
 	cd local-agent && uv run python -m src.main
 
 # =============================================================================
+# Workers (FastStream)
+# =============================================================================
+worker: check-env
+	@echo "$(GREEN)Запуск FastStream worker...$(NC)"
+	@set -a && . ./$(ENV_FILE) && set +a && \
+	uv run python -m src.workers.main
+
+worker-dev: check-env
+	@echo "$(GREEN)Запуск FastStream worker с hot-reload...$(NC)"
+	@set -a && . ./$(ENV_FILE) && set +a && \
+	uv run faststream run src.workers.main:app --reload
+
+# =============================================================================
 # Логи
 # =============================================================================
 logs: check-env
@@ -171,8 +196,8 @@ logs: check-env
 logs-backend: check-env
 	$(DC) logs -f backend
 
-logs-frontend: check-env
-	$(DC) logs -f frontend
+logs-nginx: check-env
+	$(DC) logs -f nginx
 
 logs-db: check-env
 	$(DC) logs -f postgres
@@ -290,5 +315,5 @@ clean-all:
 shell: check-env
 	$(DC) exec backend bash
 
-shell-frontend: check-env
-	$(DC) exec frontend sh
+shell-nginx: check-env
+	$(DC) exec nginx sh

@@ -17,6 +17,9 @@ dependencies = [
     "pgvector>=0.2.4",
     # Redis
     "redis>=5.0.0",
+    # Task Queue & Caching
+    "faststream[redis]>=0.6.0",
+    "cashews[redis]>=7.4.0",
     # Auth & Security
     "python-jose[cryptography]>=3.3.0",
     "PyJWT>=2.8.0",
