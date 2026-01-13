@@ -93,9 +93,9 @@ function handleSave() {
       <div class="card-body">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 class="text-xl font-bold">Generated Cards</h2>
+            <h2 class="text-xl font-bold">Сгенерированные карточки</h2>
             <p class="text-base-content/70">
-              {{ cards.length }} cards generated. Select the ones you want to save.
+              Сгенерировано {{ cards.length }} карточек. Выберите те, которые хотите сохранить.
             </p>
           </div>
 
@@ -107,9 +107,9 @@ function handleSave() {
                 @change="toggleSelectAll"
                 class="checkbox checkbox-primary"
               />
-              <span class="text-sm">Select all</span>
+              <span class="text-sm">Выбрать все</span>
             </label>
-            <span class="badge badge-primary">{{ selectedCount }} selected</span>
+            <span class="badge badge-primary">{{ selectedCount }} выбрано</span>
           </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ function handleSave() {
           <button
             @click="startEdit(index)"
             class="btn btn-ghost btn-xs btn-circle bg-base-100"
-            title="Edit"
+            title="Редактировать"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -146,7 +146,7 @@ function handleSave() {
           <button
             @click="removeCard(index)"
             class="btn btn-ghost btn-xs btn-circle bg-base-100 text-error"
-            title="Remove"
+            title="Удалить"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -166,11 +166,11 @@ function handleSave() {
     <!-- Edit modal -->
     <div v-if="editingIndex !== null" class="modal modal-open">
       <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Edit Card</h3>
+        <h3 class="font-bold text-lg mb-4">Редактировать карточку</h3>
 
         <div class="form-control mb-4">
           <label class="label">
-            <span class="label-text">Front</span>
+            <span class="label-text">Вопрос</span>
           </label>
           <textarea
             v-model="editForm.front"
@@ -180,7 +180,7 @@ function handleSave() {
 
         <div class="form-control mb-4">
           <label class="label">
-            <span class="label-text">Back</span>
+            <span class="label-text">Ответ</span>
           </label>
           <textarea
             v-model="editForm.back"
@@ -189,8 +189,8 @@ function handleSave() {
         </div>
 
         <div class="modal-action">
-          <Button @click="cancelEdit" variant="ghost">Cancel</Button>
-          <Button @click="saveEdit" variant="primary">Save</Button>
+          <Button @click="cancelEdit" variant="ghost">Отмена</Button>
+          <Button @click="saveEdit" variant="primary">Сохранить</Button>
         </div>
       </div>
     </div>
@@ -200,12 +200,12 @@ function handleSave() {
       <div class="card-body">
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div class="flex items-center gap-4 w-full sm:w-auto">
-            <label class="label-text font-medium">Save to:</label>
+            <label class="label-text font-medium">Сохранить в:</label>
             <select
               v-model="targetDeckId"
               class="select select-bordered flex-1 sm:w-64"
             >
-              <option :value="null" disabled>Select a deck</option>
+              <option :value="null" disabled>Выберите колоду</option>
               <option v-for="deck in decks" :key="deck.id" :value="deck.id">
                 {{ deck.name }}
               </option>
@@ -214,10 +214,10 @@ function handleSave() {
 
           <div class="flex gap-2 w-full sm:w-auto">
             <Button @click="emit('cancel')" variant="ghost" class="flex-1 sm:flex-none">
-              Cancel
+              Отмена
             </Button>
             <Button @click="emit('regenerate')" variant="secondary" class="flex-1 sm:flex-none">
-              Regenerate
+              Пересоздать
             </Button>
             <Button
               @click="handleSave"
@@ -225,7 +225,7 @@ function handleSave() {
               :disabled="!targetDeckId || selectedCount === 0"
               class="flex-1 sm:flex-none"
             >
-              Save {{ selectedCount }} Cards
+              Сохранить {{ selectedCount }} карточек
             </Button>
           </div>
         </div>

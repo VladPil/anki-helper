@@ -1,10 +1,34 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { decksApi } from '@/api/decks'
+
+// localStorage keys
+const RECENT_DECKS_KEY = 'ankirag_recent_decks'
+const MAX_RECENT_DECKS = 10
+
+// Helper to load recent decks from localStorage
+function loadRecentDecksFromStorage() {
+  try {
+    const stored = localStorage.getItem(RECENT_DECKS_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+// Helper to save recent decks to localStorage
+function saveRecentDecksToStorage(decks) {
+  try {
+    localStorage.setItem(RECENT_DECKS_KEY, JSON.stringify(decks.slice(0, MAX_RECENT_DECKS)))
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 export const useDecksStore = defineStore('decks', () => {
   // State
   const decks = ref([])
+  const recentDecks = ref(loadRecentDecksFromStorage())
   const currentDeck = ref(null)
   const loading = ref(false)
   const error = ref(null)
@@ -46,6 +70,9 @@ export const useDecksStore = defineStore('decks', () => {
         pagination.value.total = response.total || decks.value.length
       }
 
+      // Update recent decks with fresh data from server
+      updateRecentDecksFromServer()
+
       return decks.value
     } catch (err) {
       error.value = err.message || 'Failed to fetch decks'
@@ -55,11 +82,36 @@ export const useDecksStore = defineStore('decks', () => {
     }
   }
 
+  // Update recent decks with fresh data from fetched decks
+  function updateRecentDecksFromServer() {
+    if (recentDecks.value.length === 0 || decks.value.length === 0) return
+
+    const updatedRecent = recentDecks.value.map(recent => {
+      const serverDeck = decks.value.find(d => d.id === recent.id)
+      if (serverDeck) {
+        return {
+          id: serverDeck.id,
+          name: serverDeck.name,
+          cardCount: serverDeck.cardCount || 0,
+          updatedAt: serverDeck.updatedAt
+        }
+      }
+      return recent
+    }).filter(recent => decks.value.some(d => d.id === recent.id)) // Remove deleted decks
+
+    recentDecks.value = updatedRecent
+    saveRecentDecksToStorage(updatedRecent)
+  }
+
   async function fetchDeck(id) {
     loading.value = true
     error.value = null
     try {
       currentDeck.value = await decksApi.getById(id)
+      // Add to recent decks
+      if (currentDeck.value) {
+        addToRecentDecks(currentDeck.value)
+      }
       return currentDeck.value
     } catch (err) {
       error.value = err.message || 'Failed to fetch deck'
@@ -67,6 +119,21 @@ export const useDecksStore = defineStore('decks', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  // Add deck to recent decks list
+  function addToRecentDecks(deck) {
+    if (!deck || !deck.id) return
+
+    // Remove existing entry if present
+    const filtered = recentDecks.value.filter(d => d.id !== deck.id)
+    // Add to beginning
+    recentDecks.value = [
+      { id: deck.id, name: deck.name, cardCount: deck.cardCount || 0, updatedAt: deck.updatedAt },
+      ...filtered
+    ].slice(0, MAX_RECENT_DECKS)
+    // Save to localStorage
+    saveRecentDecksToStorage(recentDecks.value)
   }
 
   async function createDeck(deckData) {
@@ -207,6 +274,7 @@ export const useDecksStore = defineStore('decks', () => {
   return {
     // State
     decks,
+    recentDecks,
     currentDeck,
     loading,
     error,
@@ -228,6 +296,7 @@ export const useDecksStore = defineStore('decks', () => {
     cloneDeck,
     setCurrentDeck,
     clearCurrentDeck,
-    clearError
+    clearError,
+    addToRecentDecks
   }
 })

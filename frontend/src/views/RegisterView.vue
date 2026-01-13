@@ -37,11 +37,11 @@ const passwordStrength = computed(() => {
 
   const levels = [
     { score: 0, label: '', color: '' },
-    { score: 1, label: 'Weak', color: 'bg-error' },
-    { score: 2, label: 'Fair', color: 'bg-warning' },
-    { score: 3, label: 'Good', color: 'bg-info' },
-    { score: 4, label: 'Strong', color: 'bg-success' },
-    { score: 5, label: 'Very Strong', color: 'bg-success' }
+    { score: 1, label: 'Слабый', color: 'bg-error' },
+    { score: 2, label: 'Средний', color: 'bg-warning' },
+    { score: 3, label: 'Хороший', color: 'bg-info' },
+    { score: 4, label: 'Надёжный', color: 'bg-success' },
+    { score: 5, label: 'Очень надёжный', color: 'bg-success' }
   ]
 
   return levels[score]
@@ -66,7 +66,7 @@ async function handleSubmit() {
   })
 
   if (success) {
-    uiStore.notifySuccess('Account created successfully!')
+    uiStore.notifySuccess('Аккаунт успешно создан!')
     router.push('/')
   }
 }
@@ -77,7 +77,7 @@ async function handleSubmit() {
     <div class="card-body">
       <div class="text-center mb-6">
         <h1 class="text-3xl font-bold text-primary">AnkiRAG</h1>
-        <p class="text-base-content/60 mt-2">Create your account</p>
+        <p class="text-base-content/60 mt-2">Создайте аккаунт</p>
       </div>
 
       <Alert
@@ -92,12 +92,12 @@ async function handleSubmit() {
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Username (optional)</span>
+            <span class="label-text">Имя пользователя (необязательно)</span>
           </label>
           <input
             v-model="form.username"
             type="text"
-            placeholder="Choose a username"
+            placeholder="Выберите имя"
             class="input input-bordered w-full"
             autocomplete="username"
           />
@@ -110,7 +110,7 @@ async function handleSubmit() {
           <input
             v-model="form.email"
             type="email"
-            placeholder="your@email.com"
+            placeholder="ваш@email.com"
             class="input input-bordered w-full"
             required
             autocomplete="email"
@@ -119,13 +119,13 @@ async function handleSubmit() {
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Password</span>
+            <span class="label-text">Пароль</span>
           </label>
           <div class="relative">
             <input
               v-model="form.password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Create a password"
+              placeholder="Придумайте пароль"
               class="input input-bordered w-full pr-10"
               required
               minlength="8"
@@ -163,19 +163,19 @@ async function handleSubmit() {
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Confirm Password</span>
+            <span class="label-text">Подтвердите пароль</span>
           </label>
           <input
             v-model="form.confirmPassword"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Confirm your password"
+            placeholder="Повторите пароль"
             class="input input-bordered w-full"
             :class="{ 'input-error': form.confirmPassword && !passwordMatch }"
             required
             autocomplete="new-password"
           />
           <label v-if="form.confirmPassword && !passwordMatch" class="label">
-            <span class="label-text-alt text-error">Passwords do not match</span>
+            <span class="label-text-alt text-error">Пароли не совпадают</span>
           </label>
         </div>
 
@@ -188,10 +188,10 @@ async function handleSubmit() {
               required
             />
             <span class="label-text">
-              I agree to the
-              <a href="#" class="link link-primary">Terms of Service</a>
-              and
-              <a href="#" class="link link-primary">Privacy Policy</a>
+              Я принимаю
+              <a href="#" class="link link-primary">Условия использования</a>
+              и
+              <a href="#" class="link link-primary">Политику конфиденциальности</a>
             </span>
           </label>
         </div>
@@ -203,15 +203,15 @@ async function handleSubmit() {
           :loading="authStore.loading"
           :disabled="!isValid"
         >
-          Create Account
+          Создать аккаунт
         </Button>
       </form>
 
-      <div class="divider">OR</div>
+      <div class="divider">ИЛИ</div>
 
       <p class="text-center text-base-content/60">
-        Already have an account?
-        <router-link to="/login" class="link link-primary">Sign in</router-link>
+        Уже есть аккаунт?
+        <router-link to="/login" class="link link-primary">Войти</router-link>
       </p>
     </div>
   </div>

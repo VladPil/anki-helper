@@ -50,10 +50,10 @@ const emit = defineEmits(['cancel'])
 
       <!-- Status message -->
       <h2 class="text-xl font-semibold mb-2">
-        <template v-if="status === 'processing'">Generating Cards...</template>
-        <template v-else-if="status === 'complete'">Generation Complete!</template>
-        <template v-else-if="status === 'error'">Generation Failed</template>
-        <template v-else>Ready to Generate</template>
+        <template v-if="status === 'processing'">Генерация карточек...</template>
+        <template v-else-if="status === 'complete'">Генерация завершена!</template>
+        <template v-else-if="status === 'error'">Ошибка генерации</template>
+        <template v-else>Готово к генерации</template>
       </h2>
 
       <p class="text-base-content/70 mb-6">{{ message }}</p>
@@ -61,7 +61,7 @@ const emit = defineEmits(['cancel'])
       <!-- Progress bar -->
       <div v-if="status === 'processing'" class="w-full max-w-md mb-6">
         <progress class="progress progress-primary w-full" :value="progress" max="100"></progress>
-        <p class="text-sm text-base-content/60 mt-2">{{ progress }}% complete</p>
+        <p class="text-sm text-base-content/60 mt-2">{{ progress }}% выполнено</p>
       </div>
 
       <!-- Tips while generating -->
@@ -69,13 +69,13 @@ const emit = defineEmits(['cancel'])
         <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span>AI is analyzing your content and creating high-quality flashcards. This may take a minute.</span>
+        <span>ИИ анализирует ваш контент и создаёт качественные флеш-карточки. Это может занять около минуты.</span>
       </div>
 
       <!-- Cancel button -->
       <div v-if="status === 'processing'" class="mt-6">
         <Button @click="emit('cancel')" variant="ghost">
-          Cancel
+          Отмена
         </Button>
       </div>
     </div>

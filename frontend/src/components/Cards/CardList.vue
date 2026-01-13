@@ -14,7 +14,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete', 'select'])
+const emit = defineEmits(['edit', 'delete', 'select', 'approve', 'reject'])
 
 const cardsStore = useCardsStore()
 
@@ -75,15 +75,15 @@ function toggleSelectAll() {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Search cards..."
+          placeholder="Поиск карточек..."
           class="input input-bordered w-full"
         />
       </div>
       <div class="flex gap-2">
         <select v-model="sortBy" class="select select-bordered">
-          <option value="createdAt">Created Date</option>
-          <option value="updatedAt">Updated Date</option>
-          <option value="front">Front</option>
+          <option value="createdAt">Дата создания</option>
+          <option value="updatedAt">Дата обновления</option>
+          <option value="front">Вопрос</option>
         </select>
         <button
           @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
@@ -113,7 +113,7 @@ function toggleSelectAll() {
           class="checkbox checkbox-primary"
         />
         <span class="text-sm text-base-content/70">
-          Select all ({{ cardsStore.selectedCount }} selected)
+          Выбрать все ({{ cardsStore.selectedCount }} выбрано)
         </span>
       </label>
     </div>
@@ -128,6 +128,8 @@ function toggleSelectAll() {
         :selected="cardsStore.selectedCards.includes(card.id)"
         @edit="emit('edit', card)"
         @delete="emit('delete', card)"
+        @approve="emit('approve', card)"
+        @reject="emit('reject', card)"
         @toggle-select="cardsStore.toggleCardSelection(card.id)"
       />
     </div>
@@ -135,7 +137,7 @@ function toggleSelectAll() {
     <!-- Empty state -->
     <div v-if="filteredCards.length === 0" class="text-center py-8">
       <p class="text-base-content/60">
-        {{ searchQuery ? 'No cards match your search' : 'No cards yet' }}
+        {{ searchQuery ? 'Карточки не найдены' : 'Пока нет карточек' }}
       </p>
     </div>
   </div>

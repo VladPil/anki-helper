@@ -33,7 +33,7 @@ async function handleGenerate(params) {
   step.value = 'generating'
   progress.value = {
     status: 'processing',
-    message: 'Analyzing content...',
+    message: 'Анализ контента...',
     progress: 10
   }
   generationError.value = null
@@ -41,10 +41,10 @@ async function handleGenerate(params) {
   try {
     // Simulate progress updates
     const progressUpdates = [
-      { message: 'Extracting key concepts...', progress: 30 },
-      { message: 'Generating flashcards...', progress: 60 },
-      { message: 'Formatting cards...', progress: 80 },
-      { message: 'Finalizing...', progress: 95 }
+      { message: 'Извлечение ключевых концепций...', progress: 30 },
+      { message: 'Генерация флеш-карточек...', progress: 60 },
+      { message: 'Форматирование карточек...', progress: 80 },
+      { message: 'Завершение...', progress: 95 }
     ]
 
     let updateIndex = 0
@@ -82,20 +82,20 @@ async function handleGenerate(params) {
     generatedCards.value = result.cards || result
     progress.value = {
       status: 'complete',
-      message: 'Generation complete!',
+      message: 'Генерация завершена!',
       progress: 100
     }
 
     step.value = 'result'
   } catch (error) {
-    generationError.value = error.message || 'Generation failed'
+    generationError.value = error.message || 'Ошибка генерации'
     progress.value = {
       status: 'error',
-      message: error.message || 'Generation failed',
+      message: error.message || 'Ошибка генерации',
       progress: 0
     }
     step.value = 'form'
-    uiStore.notifyError(error.message || 'Failed to generate cards')
+    uiStore.notifyError(error.message || 'Не удалось сгенерировать карточки')
   }
 }
 
@@ -109,7 +109,7 @@ async function handleSaveCards(selectedCards, deckId) {
 
   const saved = await cardsStore.createCards(cardsToSave)
   if (saved) {
-    uiStore.notifySuccess(`${saved.length} cards saved to deck!`)
+    uiStore.notifySuccess(`${saved.length} карточек сохранено в колоду!`)
     step.value = 'form'
     generatedCards.value = []
   }
@@ -135,22 +135,22 @@ function startOver() {
 <template>
   <div class="container mx-auto max-w-4xl">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-base-content">Generate Cards</h1>
+      <h1 class="text-3xl font-bold text-base-content">Генерация карточек</h1>
       <p class="text-base-content/60 mt-2">
-        Use AI to automatically create flashcards from your content
+        Используйте ИИ для автоматического создания флеш-карточек из вашего контента
       </p>
     </div>
 
     <!-- Step indicator -->
     <ul class="steps steps-horizontal w-full mb-8">
       <li class="step" :class="{ 'step-primary': step === 'form' || step === 'generating' || step === 'result' }">
-        Configure
+        Настройка
       </li>
       <li class="step" :class="{ 'step-primary': step === 'generating' || step === 'result' }">
-        Generate
+        Генерация
       </li>
       <li class="step" :class="{ 'step-primary': step === 'result' }">
-        Review & Save
+        Проверка и сохранение
       </li>
     </ul>
 

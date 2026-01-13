@@ -44,7 +44,7 @@ export const decksApi = {
    * @returns {Promise} Updated deck data
    */
   async update(id, deckData) {
-    const response = await apiClient.put(`/decks/${id}`, deckData)
+    const response = await apiClient.patch(`/decks/${id}`, deckData)
     return response.data
   },
 

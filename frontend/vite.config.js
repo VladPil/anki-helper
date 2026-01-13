@@ -10,19 +10,9 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false
-      },
-      '/ws': {
-        target: 'ws://localhost:8000',
-        ws: true,
-        changeOrigin: true
-      }
-    }
+    port: 5173,
+    // No proxy needed - frontend makes direct requests to backend
+    // CORS is configured on backend to allow localhost:5173
   },
   build: {
     outDir: 'dist',

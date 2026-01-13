@@ -259,6 +259,90 @@ export const useCardsStore = defineStore('cards', () => {
     }
   }
 
+  async function approveCard(id, reason = null) {
+    loading.value = true
+    error.value = null
+    try {
+      const updatedCard = await cardsApi.approve(id, reason)
+      const index = cards.value.findIndex(c => c.id === id)
+      if (index !== -1) {
+        cards.value[index] = updatedCard
+      }
+      return updatedCard
+    } catch (err) {
+      error.value = err.message || 'Failed to approve card'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function rejectCard(id, reason) {
+    loading.value = true
+    error.value = null
+    try {
+      const updatedCard = await cardsApi.reject(id, reason)
+      const index = cards.value.findIndex(c => c.id === id)
+      if (index !== -1) {
+        cards.value[index] = updatedCard
+      }
+      return updatedCard
+    } catch (err) {
+      error.value = err.message || 'Failed to reject card'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function approveCards(ids) {
+    loading.value = true
+    error.value = null
+    try {
+      const result = await cardsApi.approveBulk(ids)
+      // Update cards in the store
+      if (result.created) {
+        result.created.forEach(approvedCard => {
+          const index = cards.value.findIndex(c => c.id === approvedCard.id)
+          if (index !== -1) {
+            cards.value[index] = approvedCard
+          }
+        })
+      }
+      selectedCards.value = []
+      return result
+    } catch (err) {
+      error.value = err.message || 'Failed to approve cards'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function rejectCards(ids, reason) {
+    loading.value = true
+    error.value = null
+    try {
+      const result = await cardsApi.rejectBulk(ids, reason)
+      // Update cards in the store
+      if (result.created) {
+        result.created.forEach(rejectedCard => {
+          const index = cards.value.findIndex(c => c.id === rejectedCard.id)
+          if (index !== -1) {
+            cards.value[index] = rejectedCard
+          }
+        })
+      }
+      selectedCards.value = []
+      return result
+    } catch (err) {
+      error.value = err.message || 'Failed to reject cards'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   // Selection management
   function selectCard(id) {
     if (!selectedCards.value.includes(id)) {
@@ -335,6 +419,10 @@ export const useCardsStore = defineStore('cards', () => {
     moveCards,
     getCardHistory,
     resetCard,
+    approveCard,
+    rejectCard,
+    approveCards,
+    rejectCards,
     selectCard,
     deselectCard,
     toggleCardSelection,

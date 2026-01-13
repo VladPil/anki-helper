@@ -155,6 +155,49 @@ export const cardsApi = {
   async reset(id) {
     const response = await apiClient.post(`/cards/${id}/reset`)
     return response.data
+  },
+
+  /**
+   * Approve a card for syncing to Anki
+   * @param {string} id - Card ID
+   * @param {string} reason - Optional approval reason
+   * @returns {Promise} Approved card
+   */
+  async approve(id, reason = null) {
+    const response = await apiClient.post(`/cards/${id}/approve`, reason ? { reason } : {})
+    return response.data
+  },
+
+  /**
+   * Reject a card
+   * @param {string} id - Card ID
+   * @param {string} reason - Rejection reason
+   * @returns {Promise} Rejected card
+   */
+  async reject(id, reason) {
+    const response = await apiClient.post(`/cards/${id}/reject`, { reason })
+    return response.data
+  },
+
+  /**
+   * Bulk approve multiple cards
+   * @param {string[]} ids - Card IDs to approve
+   * @returns {Promise} Approval result
+   */
+  async approveBulk(ids) {
+    const response = await apiClient.post('/cards/bulk/approve', ids)
+    return response.data
+  },
+
+  /**
+   * Bulk reject multiple cards
+   * @param {string[]} ids - Card IDs to reject
+   * @param {string} reason - Rejection reason
+   * @returns {Promise} Rejection result
+   */
+  async rejectBulk(ids, reason) {
+    const response = await apiClient.post('/cards/bulk/reject', { card_ids: ids, reason })
+    return response.data
   }
 }
 

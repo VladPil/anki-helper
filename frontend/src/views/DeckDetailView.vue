@@ -54,42 +54,68 @@ async function handleSaveCard(cardData) {
   if (editingCard.value) {
     const updated = await cardsStore.updateCard(editingCard.value.id, cardData)
     if (updated) {
-      uiStore.notifySuccess('Card updated successfully!')
+      uiStore.notifySuccess('Карточка обновлена!')
       showCardEditor.value = false
       editingCard.value = null
     }
   } else {
     const created = await cardsStore.createCard({ ...cardData, deckId: props.id })
     if (created) {
-      uiStore.notifySuccess('Card created successfully!')
+      uiStore.notifySuccess('Карточка создана!')
       showCardEditor.value = false
     }
   }
 }
 
 async function handleDeleteCard(card) {
-  if (!confirm('Are you sure you want to delete this card?')) return
+  if (!confirm('Вы уверены, что хотите удалить эту карточку?')) return
 
   const success = await cardsStore.deleteCard(card.id)
   if (success) {
-    uiStore.notifySuccess('Card deleted successfully!')
+    uiStore.notifySuccess('Карточка удалена!')
   }
 }
 
 async function handleDeleteSelected() {
   if (!cardsStore.hasSelectedCards) return
 
-  if (!confirm(`Delete ${cardsStore.selectedCount} selected cards?`)) return
+  if (!confirm(`Удалить ${cardsStore.selectedCount} выбранных карточек?`)) return
 
   const success = await cardsStore.deleteCards(cardsStore.selectedCards)
   if (success) {
-    uiStore.notifySuccess(`${cardsStore.selectedCount} cards deleted!`)
+    uiStore.notifySuccess(`${cardsStore.selectedCount} карточек удалено!`)
+  }
+}
+
+async function handleApproveCard(card) {
+  const result = await cardsStore.approveCard(card.id)
+  if (result) {
+    uiStore.notifySuccess('Карточка одобрена для синхронизации!')
+  }
+}
+
+async function handleRejectCard(card) {
+  const reason = prompt('Укажите причину отклонения (необязательно):')
+  if (reason === null) return // User cancelled
+
+  const result = await cardsStore.rejectCard(card.id, reason || 'Отклонено пользователем')
+  if (result) {
+    uiStore.notifySuccess('Карточка отклонена')
+  }
+}
+
+async function handleApproveSelected() {
+  if (!cardsStore.hasSelectedCards) return
+
+  const result = await cardsStore.approveCards(cardsStore.selectedCards)
+  if (result) {
+    uiStore.notifySuccess(`${result.total_created} карточек одобрено!`)
   }
 }
 
 async function handleExport(format) {
   await decksStore.exportDeck(props.id, format)
-  uiStore.notifySuccess('Deck exported successfully!')
+  uiStore.notifySuccess('Колода экспортирована!')
 }
 
 function goToGenerate() {
@@ -105,7 +131,7 @@ function goToGenerate() {
       <!-- Header -->
       <div class="mb-6">
         <div class="flex items-center gap-2 text-sm text-base-content/60 mb-2">
-          <router-link to="/decks" class="hover:text-primary">Decks</router-link>
+          <router-link to="/decks" class="hover:text-primary">Колоды</router-link>
           <span>/</span>
           <span>{{ deck.name }}</span>
         </div>
@@ -123,13 +149,13 @@ function goToGenerate() {
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
-              Add Card
+              Добавить карточку
             </Button>
             <Button @click="goToGenerate" variant="secondary">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Generate
+              Генерировать
             </Button>
             <div class="dropdown dropdown-end">
               <label tabindex="0" class="btn btn-ghost">
@@ -138,9 +164,9 @@ function goToGenerate() {
                 </svg>
               </label>
               <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
-                <li><a @click="handleExport('apkg')">Export as .apkg</a></li>
-                <li><a @click="handleExport('csv')">Export as CSV</a></li>
-                <li><a @click="handleExport('json')">Export as JSON</a></li>
+                <li><a @click="handleExport('apkg')">Экспорт в .apkg</a></li>
+                <li><a @click="handleExport('csv')">Экспорт в CSV</a></li>
+                <li><a @click="handleExport('json')">Экспорт в JSON</a></li>
               </ul>
             </div>
           </div>
@@ -150,19 +176,19 @@ function goToGenerate() {
       <!-- Stats -->
       <div class="stats stats-vertical sm:stats-horizontal shadow mb-6 w-full">
         <div class="stat">
-          <div class="stat-title">Total Cards</div>
+          <div class="stat-title">Всего карточек</div>
           <div class="stat-value text-primary">{{ cards.length }}</div>
         </div>
         <div class="stat">
-          <div class="stat-title">Due Today</div>
+          <div class="stat-title">К повторению</div>
           <div class="stat-value text-accent">{{ deck.dueCount || 0 }}</div>
         </div>
         <div class="stat">
-          <div class="stat-title">New Cards</div>
+          <div class="stat-title">Новых</div>
           <div class="stat-value text-secondary">{{ deck.newCount || 0 }}</div>
         </div>
         <div class="stat">
-          <div class="stat-title">Learning</div>
+          <div class="stat-title">Изучаемых</div>
           <div class="stat-value text-info">{{ deck.learningCount || 0 }}</div>
         </div>
       </div>
@@ -174,27 +200,33 @@ function goToGenerate() {
           :class="{ 'tab-active': activeTab === 'cards' }"
           @click="activeTab = 'cards'"
         >
-          Cards
+          Карточки
         </a>
         <a
           class="tab"
           :class="{ 'tab-active': activeTab === 'stats' }"
           @click="activeTab = 'stats'"
         >
-          Statistics
+          Статистика
         </a>
       </div>
 
       <!-- Cards Tab -->
       <div v-if="activeTab === 'cards'">
         <!-- Bulk actions -->
-        <div v-if="cardsStore.hasSelectedCards" class="flex items-center gap-4 mb-4 p-4 bg-base-200 rounded-lg">
-          <span class="text-sm">{{ cardsStore.selectedCount }} selected</span>
+        <div v-if="cardsStore.hasSelectedCards" class="flex flex-wrap items-center gap-4 mb-4 p-4 bg-base-200 rounded-lg">
+          <span class="text-sm">{{ cardsStore.selectedCount }} выбрано</span>
+          <Button @click="handleApproveSelected" variant="success" size="sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Одобрить выбранные
+          </Button>
           <Button @click="handleDeleteSelected" variant="error" size="sm">
-            Delete Selected
+            Удалить выбранные
           </Button>
           <Button @click="cardsStore.clearSelection" variant="ghost" size="sm">
-            Clear Selection
+            Сбросить выбор
           </Button>
         </div>
 
@@ -204,14 +236,16 @@ function goToGenerate() {
           :selectable="true"
           @edit="openCardEditor"
           @delete="handleDeleteCard"
+          @approve="handleApproveCard"
+          @reject="handleRejectCard"
         />
 
         <!-- Empty state -->
         <div v-if="cards.length === 0" class="text-center py-12">
-          <p class="text-base-content/60 mb-4">No cards in this deck yet</p>
+          <p class="text-base-content/60 mb-4">В этой колоде пока нет карточек</p>
           <div class="flex justify-center gap-4">
-            <Button @click="openCardEditor()" variant="primary">Add Card Manually</Button>
-            <Button @click="goToGenerate" variant="secondary">Generate with AI</Button>
+            <Button @click="openCardEditor()" variant="primary">Добавить вручную</Button>
+            <Button @click="goToGenerate" variant="secondary">Сгенерировать с ИИ</Button>
           </div>
         </div>
       </div>
@@ -219,23 +253,23 @@ function goToGenerate() {
       <!-- Stats Tab -->
       <div v-if="activeTab === 'stats'" class="card bg-base-100 shadow">
         <div class="card-body">
-          <h3 class="card-title">Learning Statistics</h3>
-          <p class="text-base-content/60">Statistics will be shown here once you start reviewing cards.</p>
+          <h3 class="card-title">Статистика обучения</h3>
+          <p class="text-base-content/60">Статистика появится после начала повторения карточек.</p>
         </div>
       </div>
     </template>
 
     <!-- Deck not found -->
     <div v-else class="text-center py-12">
-      <h2 class="text-xl font-semibold mb-2">Deck not found</h2>
-      <p class="text-base-content/60 mb-4">This deck may have been deleted or you don't have access to it.</p>
-      <Button @click="router.push('/decks')" variant="primary">Go to Decks</Button>
+      <h2 class="text-xl font-semibold mb-2">Колода не найдена</h2>
+      <p class="text-base-content/60 mb-4">Эта колода была удалена или у вас нет к ней доступа.</p>
+      <Button @click="router.push('/decks')" variant="primary">К списку колод</Button>
     </div>
 
     <!-- Card Editor Modal -->
     <Modal
       v-model="showCardEditor"
-      :title="editingCard ? 'Edit Card' : 'Add New Card'"
+      :title="editingCard ? 'Редактировать карточку' : 'Новая карточка'"
       size="lg"
     >
       <CardEditor

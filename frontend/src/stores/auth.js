@@ -6,8 +6,10 @@ export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref(null)
   const token = ref(localStorage.getItem('token') || null)
+  const refreshToken = ref(localStorage.getItem('refreshToken') || null)
   const loading = ref(false)
   const error = ref(null)
+  const isRefreshing = ref(false)
 
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -21,7 +23,11 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authApi.login(credentials)
       token.value = response.access_token
+      refreshToken.value = response.refresh_token
       localStorage.setItem('token', response.access_token)
+      if (response.refresh_token) {
+        localStorage.setItem('refreshToken', response.refresh_token)
+      }
       await fetchProfile()
       return true
     } catch (err) {
@@ -51,14 +57,43 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    const currentRefreshToken = refreshToken.value
     try {
-      await authApi.logout()
+      if (currentRefreshToken) {
+        await authApi.logout(currentRefreshToken)
+      }
     } catch {
       // Ignore logout errors
     } finally {
       user.value = null
       token.value = null
+      refreshToken.value = null
       localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+    }
+  }
+
+  async function refreshAccessToken() {
+    if (!refreshToken.value || isRefreshing.value) {
+      return false
+    }
+
+    isRefreshing.value = true
+    try {
+      const response = await authApi.refreshToken(refreshToken.value)
+      token.value = response.access_token
+      localStorage.setItem('token', response.access_token)
+      if (response.refresh_token) {
+        refreshToken.value = response.refresh_token
+        localStorage.setItem('refreshToken', response.refresh_token)
+      }
+      return true
+    } catch (err) {
+      // Refresh failed, logout user
+      await logout()
+      return false
+    } finally {
+      isRefreshing.value = false
     }
   }
 
@@ -152,8 +187,10 @@ export const useAuthStore = defineStore('auth', () => {
     // State
     user,
     token,
+    refreshToken,
     loading,
     error,
+    isRefreshing,
     // Getters
     isAuthenticated,
     userEmail,
@@ -162,6 +199,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    refreshAccessToken,
     fetchProfile,
     updateProfile,
     changePassword,

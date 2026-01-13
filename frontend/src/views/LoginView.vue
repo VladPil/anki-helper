@@ -29,7 +29,7 @@ async function handleSubmit() {
   const success = await authStore.login(form.value)
 
   if (success) {
-    uiStore.notifySuccess('Welcome back!')
+    uiStore.notifySuccess('С возвращением!')
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   }
@@ -41,7 +41,7 @@ async function handleSubmit() {
     <div class="card-body">
       <div class="text-center mb-6">
         <h1 class="text-3xl font-bold text-primary">AnkiRAG</h1>
-        <p class="text-base-content/60 mt-2">Sign in to your account</p>
+        <p class="text-base-content/60 mt-2">Войдите в свой аккаунт</p>
       </div>
 
       <Alert
@@ -61,7 +61,7 @@ async function handleSubmit() {
           <input
             v-model="form.email"
             type="email"
-            placeholder="your@email.com"
+            placeholder="ваш@email.com"
             class="input input-bordered w-full"
             :class="{ 'input-error': authStore.error }"
             required
@@ -71,13 +71,13 @@ async function handleSubmit() {
 
         <div class="form-control">
           <label class="label">
-            <span class="label-text">Password</span>
+            <span class="label-text">Пароль</span>
           </label>
           <div class="relative">
             <input
               v-model="form.password"
               :type="showPassword ? 'text' : 'password'"
-              placeholder="Enter your password"
+              placeholder="Введите пароль"
               class="input input-bordered w-full pr-10"
               :class="{ 'input-error': authStore.error }"
               required
@@ -106,9 +106,9 @@ async function handleSubmit() {
               type="checkbox"
               class="checkbox checkbox-primary checkbox-sm"
             />
-            <span class="label-text">Remember me</span>
+            <span class="label-text">Запомнить меня</span>
           </label>
-          <a href="#" class="link link-primary text-sm">Forgot password?</a>
+          <a href="#" class="link link-primary text-sm">Забыли пароль?</a>
         </div>
 
         <Button
@@ -118,15 +118,15 @@ async function handleSubmit() {
           :loading="authStore.loading"
           :disabled="!isValid"
         >
-          Sign In
+          Войти
         </Button>
       </form>
 
-      <div class="divider">OR</div>
+      <div class="divider">ИЛИ</div>
 
       <p class="text-center text-base-content/60">
-        Don't have an account?
-        <router-link to="/register" class="link link-primary">Sign up</router-link>
+        Нет аккаунта?
+        <router-link to="/register" class="link link-primary">Зарегистрироваться</router-link>
       </p>
     </div>
   </div>

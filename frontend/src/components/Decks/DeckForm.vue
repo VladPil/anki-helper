@@ -74,13 +74,13 @@ function handleSubmit() {
     <!-- Name -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text font-medium">Deck Name *</span>
+        <span class="label-text font-medium">Название колоды *</span>
       </label>
       <input
         v-model="form.name"
         type="text"
         class="input input-bordered w-full"
-        placeholder="Enter deck name..."
+        placeholder="Введите название..."
         required
         autofocus
       />
@@ -89,19 +89,19 @@ function handleSubmit() {
     <!-- Description -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text font-medium">Description</span>
+        <span class="label-text font-medium">Описание</span>
       </label>
       <textarea
         v-model="form.description"
         class="textarea textarea-bordered h-24 resize-none"
-        placeholder="Describe what this deck is about..."
+        placeholder="Опишите, о чём эта колода..."
       ></textarea>
     </div>
 
     <!-- Tags -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text font-medium">Tags</span>
+        <span class="label-text font-medium">Теги</span>
       </label>
       <div class="flex flex-wrap gap-2 mb-2">
         <span
@@ -122,11 +122,11 @@ function handleSubmit() {
           v-model="tagInput"
           type="text"
           class="input input-bordered join-item flex-1"
-          placeholder="Add a tag..."
+          placeholder="Добавить тег..."
           @keydown="handleTagKeydown"
         />
         <button type="button" @click="addTag" class="btn btn-ghost join-item">
-          Add
+          Добавить
         </button>
       </div>
     </div>
@@ -134,10 +134,10 @@ function handleSubmit() {
     <!-- Actions -->
     <div class="flex justify-end gap-2 pt-4">
       <Button type="button" variant="ghost" @click="emit('cancel')">
-        Cancel
+        Отмена
       </Button>
       <Button type="submit" variant="primary" :loading="loading" :disabled="!isValid">
-        {{ deck ? 'Update Deck' : 'Create Deck' }}
+        {{ deck ? 'Сохранить' : 'Создать' }}
       </Button>
     </div>
   </form>

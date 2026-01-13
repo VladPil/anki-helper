@@ -22,7 +22,7 @@ const showSidebar = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col" :data-theme="uiStore.theme">
+  <div class="min-h-screen flex flex-col overflow-x-hidden" :data-theme="uiStore.theme">
     <!-- Notifications -->
     <div class="toast toast-top toast-end z-50">
       <Alert

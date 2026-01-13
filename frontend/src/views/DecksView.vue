@@ -43,7 +43,7 @@ async function handleCreate(deckData) {
   const deck = await decksStore.createDeck(deckData)
   if (deck) {
     showCreateModal.value = false
-    uiStore.notifySuccess('Deck created successfully!')
+    uiStore.notifySuccess('Колода создана!')
   }
 }
 
@@ -54,18 +54,18 @@ async function handleUpdate(deckData) {
   if (deck) {
     showEditModal.value = false
     editingDeck.value = null
-    uiStore.notifySuccess('Deck updated successfully!')
+    uiStore.notifySuccess('Колода обновлена!')
   }
 }
 
 async function handleDelete(deck) {
-  if (!confirm(`Are you sure you want to delete "${deck.name}"? This action cannot be undone.`)) {
+  if (!confirm(`Вы уверены, что хотите удалить "${deck.name}"? Это действие нельзя отменить.`)) {
     return
   }
 
   const success = await decksStore.deleteDeck(deck.id)
   if (success) {
-    uiStore.notifySuccess('Deck deleted successfully!')
+    uiStore.notifySuccess('Колода удалена!')
   }
 }
 </script>
@@ -75,9 +75,9 @@ async function handleDelete(deck) {
     <!-- Header -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-3xl font-bold text-base-content">My Decks</h1>
+        <h1 class="text-3xl font-bold text-base-content">Мои колоды</h1>
         <p class="text-base-content/60 mt-1">
-          {{ decksStore.deckCount }} decks, {{ decksStore.totalCards }} total cards
+          {{ decksStore.deckCount }} колод, {{ decksStore.totalCards }} карточек
         </p>
       </div>
 
@@ -85,7 +85,7 @@ async function handleDelete(deck) {
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
-        New Deck
+        Новая колода
       </Button>
     </div>
 
@@ -101,7 +101,7 @@ async function handleDelete(deck) {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search decks..."
+            placeholder="Поиск колод..."
             class="input input-bordered w-full max-w-md"
           />
         </div>
@@ -118,14 +118,14 @@ async function handleDelete(deck) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       </div>
-      <h2 class="text-xl font-semibold mb-2">No decks yet</h2>
-      <p class="text-base-content/60 mb-4">Create your first deck to start learning</p>
-      <Button @click="openCreateModal" variant="primary">Create Your First Deck</Button>
+      <h2 class="text-xl font-semibold mb-2">Пока нет колод</h2>
+      <p class="text-base-content/60 mb-4">Создайте первую колоду для начала обучения</p>
+      <Button @click="openCreateModal" variant="primary">Создать первую колоду</Button>
     </div>
 
     <!-- No search results -->
     <div v-else-if="filteredDecks.length === 0" class="text-center py-12">
-      <p class="text-base-content/60">No decks match your search</p>
+      <p class="text-base-content/60">Колоды не найдены</p>
     </div>
 
     <!-- Deck list -->
@@ -137,7 +137,7 @@ async function handleDelete(deck) {
     />
 
     <!-- Create Modal -->
-    <Modal v-model="showCreateModal" title="Create New Deck">
+    <Modal v-model="showCreateModal" title="Создать колоду">
       <DeckForm
         @submit="handleCreate"
         @cancel="showCreateModal = false"
@@ -146,7 +146,7 @@ async function handleDelete(deck) {
     </Modal>
 
     <!-- Edit Modal -->
-    <Modal v-model="showEditModal" title="Edit Deck">
+    <Modal v-model="showEditModal" title="Редактировать колоду">
       <DeckForm
         v-if="editingDeck"
         :deck="editingDeck"

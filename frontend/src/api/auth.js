@@ -6,11 +6,16 @@ export const authApi = {
    * @param {Object} userData - User registration data
    * @param {string} userData.email - User email
    * @param {string} userData.password - User password
-   * @param {string} userData.username - Username (optional)
+   * @param {string} userData.username - Display name
    * @returns {Promise} Response with user data
    */
   async register(userData) {
-    const response = await apiClient.post('/auth/register', userData)
+    const payload = {
+      email: userData.email,
+      password: userData.password,
+      display_name: userData.username || userData.display_name || userData.email.split('@')[0]
+    }
+    const response = await apiClient.post('/auth/register', payload)
     return response.data
   },
 
@@ -22,24 +27,22 @@ export const authApi = {
    * @returns {Promise} Response with token and user data
    */
   async login(credentials) {
-    const formData = new URLSearchParams()
-    formData.append('username', credentials.email)
-    formData.append('password', credentials.password)
-
-    const response = await apiClient.post('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
+    const response = await apiClient.post('/auth/login', {
+      email: credentials.email,
+      password: credentials.password
     })
     return response.data
   },
 
   /**
    * Logout current user
+   * @param {string} refreshToken - Refresh token to invalidate
    * @returns {Promise}
    */
-  async logout() {
-    const response = await apiClient.post('/auth/logout')
+  async logout(refreshToken) {
+    const response = await apiClient.post('/auth/logout', {
+      refresh_token: refreshToken
+    })
     return response.data
   },
 
@@ -48,7 +51,7 @@ export const authApi = {
    * @returns {Promise} User profile data
    */
   async getProfile() {
-    const response = await apiClient.get('/auth/me')
+    const response = await apiClient.get('/users/me')
     return response.data
   },
 
@@ -98,10 +101,13 @@ export const authApi = {
 
   /**
    * Refresh access token
-   * @returns {Promise} New access token
+   * @param {string} refreshToken - Refresh token
+   * @returns {Promise} New access token pair
    */
-  async refreshToken() {
-    const response = await apiClient.post('/auth/refresh')
+  async refreshToken(refreshToken) {
+    const response = await apiClient.post('/auth/refresh', {
+      refresh_token: refreshToken
+    })
     return response.data
   }
 }
