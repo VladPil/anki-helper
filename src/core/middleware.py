@@ -66,7 +66,8 @@ class RequestTracingMiddleware(BaseHTTPMiddleware):
         user_id = getattr(request.state, "user_id", None)
 
         # Получение trace/span IDs из OpenTelemetry
-        trace_id = get_trace_id()
+        # Используем request_id как fallback если телеметрия отключена
+        trace_id = get_trace_id() or request_id
         span_id = get_span_id()
 
         # Установка контекста логирования

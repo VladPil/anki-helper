@@ -311,6 +311,198 @@ class AnkiConnectClient:
 
         return self._invoke("storeMediaFile", **params)
 
+    def get_deck_note_ids(self, deck_name: str) -> list[int]:
+        """Get all note IDs in a deck.
+
+        Args:
+            deck_name: Name of the deck.
+
+        Returns:
+            List of note IDs.
+        """
+        return self.find_notes(f'deck:"{deck_name}"')
+
+    def get_notes_info_batch(
+        self,
+        note_ids: list[int],
+        batch_size: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Get note info in batches to avoid timeouts.
+
+        Args:
+            note_ids: List of note IDs.
+            batch_size: Number of notes per batch.
+
+        Yields:
+            Note info dictionaries.
+        """
+        all_notes = []
+        for i in range(0, len(note_ids), batch_size):
+            batch = note_ids[i : i + batch_size]
+            logger.debug(
+                f"Fetching notes batch {i // batch_size + 1}, "
+                f"notes {i + 1}-{min(i + batch_size, len(note_ids))} of {len(note_ids)}"
+            )
+            notes = self.get_notes_info(batch)
+            all_notes.extend(notes)
+        return all_notes
+
+    def extract_card_data(self, note: dict[str, Any]) -> dict[str, Any] | None:
+        """Extract card data from note info.
+
+        Args:
+            note: Note info dictionary.
+
+        Returns:
+            Card data dictionary or None if invalid.
+        """
+        if not note.get("noteId"):
+            return None
+
+        fields = note.get("fields", {})
+        front = ""
+        back = ""
+
+        # Try common field names
+        if "Front" in fields:
+            front = fields["Front"].get("value", "")
+        elif "Text" in fields:
+            front = fields["Text"].get("value", "")
+        elif fields:
+            first_field = list(fields.values())[0]
+            front = first_field.get("value", "")
+
+        # Try common field names for back (case-sensitive, then fallback)
+        back_field_names = [
+            "Back", "back", "Answer", "answer", "Meaning", "meaning",
+            "Extra", "Definition", "definition", "Response", "response",
+        ]
+        for name in back_field_names:
+            if name in fields:
+                back = fields[name].get("value", "")
+                break
+        else:
+            # Fallback: use second field if exists
+            if len(fields) > 1:
+                second_field = list(fields.values())[1]
+                back = second_field.get("value", "")
+
+        return {
+            "anki_note_id": note["noteId"],
+            "front": front,
+            "back": back,
+            "tags": note.get("tags", []),
+            "model": note.get("modelName", "Basic"),
+        }
+
+    def get_all_decks_with_cards(self) -> dict[str, list[dict[str, Any]]]:
+        """Get all decks with their cards for import to AnkiRAG.
+
+        Returns:
+            Dictionary mapping deck names to list of card data.
+        """
+        result: dict[str, list[dict[str, Any]]] = {}
+
+        decks = self.get_deck_names()
+        logger.info(f"Found {len(decks)} decks in Anki")
+
+        for deck_name in decks:
+            # Skip default deck if empty
+            if deck_name == "Default":
+                logger.debug("Skipping Default deck")
+                continue
+
+            # Find all notes in deck
+            logger.debug(f"Getting notes for deck: {deck_name}")
+            note_ids = self.find_notes(f'deck:"{deck_name}"')
+
+            if not note_ids:
+                logger.debug(f"No notes in deck: {deck_name}")
+                continue
+
+            logger.info(f"Deck '{deck_name}': {len(note_ids)} notes found")
+
+            # Get note details in batches
+            notes_info = self.get_notes_info_batch(note_ids)
+
+            cards_data = []
+            for note in notes_info:
+                card_data = self.extract_card_data(note)
+                if card_data:
+                    cards_data.append(card_data)
+
+            if cards_data:
+                result[deck_name] = cards_data
+                logger.info(f"Deck '{deck_name}': {len(cards_data)} cards extracted")
+
+        logger.info(f"Total: {len(result)} decks with cards ready for import")
+        return result
+
+    def iter_deck_cards(
+        self,
+        deck_name: str,
+        batch_size: int = 100,
+    ):
+        """Iterate over cards in a deck in batches.
+
+        Args:
+            deck_name: Name of the deck.
+            batch_size: Number of notes to process per batch.
+
+        Yields:
+            Tuples of (batch_index, total_batches, list of card data).
+        """
+        note_ids = self.find_notes(f'deck:"{deck_name}"')
+
+        if not note_ids:
+            return
+
+        total_batches = (len(note_ids) + batch_size - 1) // batch_size
+        logger.info(
+            f"Deck '{deck_name}': {len(note_ids)} notes, {total_batches} batches"
+        )
+
+        for i in range(0, len(note_ids), batch_size):
+            batch_ids = note_ids[i : i + batch_size]
+            batch_index = i // batch_size
+
+            logger.debug(
+                f"Processing batch {batch_index + 1}/{total_batches} "
+                f"({len(batch_ids)} notes)"
+            )
+
+            notes_info = self.get_notes_info(batch_ids)
+            cards_data = []
+
+            for note in notes_info:
+                card_data = self.extract_card_data(note)
+                if card_data:
+                    cards_data.append(card_data)
+
+            yield batch_index, total_batches, cards_data
+
+    def get_deck_stats(self) -> dict[str, dict[str, int]]:
+        """Get statistics for all decks.
+
+        Returns:
+            Dictionary mapping deck names to stats (card count, etc.)
+        """
+        stats = {}
+        decks = self.get_deck_names()
+
+        for deck_name in decks:
+            try:
+                card_ids = self.find_cards(f'deck:"{deck_name}"')
+                note_ids = self.find_notes(f'deck:"{deck_name}"')
+                stats[deck_name] = {
+                    "card_count": len(card_ids),
+                    "note_count": len(note_ids),
+                }
+            except AnkiConnectError:
+                stats[deck_name] = {"card_count": 0, "note_count": 0}
+
+        return stats
+
     def close(self) -> None:
         """Close the HTTP client."""
         self.client.close()

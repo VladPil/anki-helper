@@ -33,6 +33,9 @@ from src.shared.logging import (
     setup_logger,
 )
 
+# Import shared context for error handling trace_id
+from src.shared.context import trace_id_var as _shared_trace_id_var
+
 # ==================== Context Variables ====================
 # Kept for backwards compatibility with existing code
 
@@ -48,13 +51,15 @@ def set_request_context(
     trace_id: str | None = None,
     span_id: str | None = None,
 ) -> None:
-    """Set request context for logging."""
+    """Set request context for logging and error handling."""
     if request_id is not None:
         _request_id_ctx.set(request_id)
     if user_id is not None:
         _user_id_ctx.set(user_id)
     if trace_id is not None:
         _trace_id_ctx.set(trace_id)
+        # Also set shared context variable for error responses
+        _shared_trace_id_var.set(trace_id)
     if span_id is not None:
         _span_id_ctx.set(span_id)
 
@@ -65,6 +70,8 @@ def clear_request_context() -> None:
     _user_id_ctx.set(None)
     _trace_id_ctx.set(None)
     _span_id_ctx.set(None)
+    # Also clear shared context variable
+    _shared_trace_id_var.set("")
 
 
 def get_request_context() -> dict[str, str | None]:

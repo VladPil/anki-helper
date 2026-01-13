@@ -105,6 +105,12 @@ async function sendMessage(content) {
       },
       // On chunk
       (chunk) => {
+        // Handle init event with conversationId
+        if (chunk.event === 'init' && chunk.conversationId) {
+          currentConversationId.value = chunk.conversationId
+          return
+        }
+
         const lastMessage = messages.value[messages.value.length - 1]
         if (lastMessage.role === 'assistant') {
           lastMessage.content += chunk.content || chunk.delta || ''
@@ -115,13 +121,8 @@ async function sendMessage(content) {
         isStreaming.value = false
         isLoading.value = false
 
-        // If this was a new conversation, reload to get the ID
-        if (!currentConversationId.value) {
-          await loadConversations()
-          if (conversations.value.length > 0) {
-            currentConversationId.value = conversations.value[0].id
-          }
-        }
+        // Reload conversations to show the new one in sidebar
+        await loadConversations()
       },
       // On error
       (error) => {

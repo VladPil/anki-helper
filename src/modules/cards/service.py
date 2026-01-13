@@ -149,9 +149,14 @@ class CardService:
         if deck is None:
             raise DeckNotFoundError(data.deck_id)
 
+        # Get or create default template if not provided
+        template_id = data.template_id
+        if template_id is None:
+            template_id = await self._get_or_create_default_template()
+
         card = Card(
             deck_id=data.deck_id,
-            template_id=data.template_id,
+            template_id=template_id,
             fields=data.fields,
             tags=data.tags,
             status=CardStatus.DRAFT,
@@ -172,6 +177,52 @@ class CardService:
         )
 
         return card
+
+    async def _get_or_create_default_template(self) -> UUID:
+        """
+        Получить или создать шаблон 'basic' по умолчанию.
+
+        Returns:
+            UUID шаблона по умолчанию
+        """
+        from src.modules.templates.models import CardTemplate
+
+        # Try to find existing basic template
+        stmt = select(CardTemplate).where(
+            and_(
+                CardTemplate.name == "basic",
+                CardTemplate.is_system.is_(True),
+            )
+        )
+        result = await self._session.execute(stmt)
+        template = result.scalar_one_or_none()
+
+        if template is not None:
+            return template.id
+
+        # Create default basic template
+        template = CardTemplate(
+            name="basic",
+            display_name="Basic",
+            fields_schema={
+                "type": "object",
+                "properties": {
+                    "Front": {"type": "string"},
+                    "Back": {"type": "string"},
+                },
+                "required": ["Front"],
+            },
+            front_template="{{Front}}",
+            back_template="{{FrontSide}}<hr id=answer>{{Back}}",
+            css=".card { font-family: arial; font-size: 20px; text-align: center; }",
+            is_system=True,
+            owner_id=None,
+        )
+        self._session.add(template)
+        await self._session.flush()
+
+        logger.info("Created default 'basic' template with ID %s", template.id)
+        return template.id
 
     async def create_bulk(
         self,
@@ -413,6 +464,51 @@ class CardService:
 
         conditions = [
             Card.status == status,
+            Card.deleted_at.is_(None),
+            Deck.owner_id == user_id,
+        ]
+
+        # Count query
+        count_stmt = select(func.count()).select_from(Card).join(Deck).where(*conditions)
+        total_result = await self._session.execute(count_stmt)
+        total = total_result.scalar_one()
+
+        # Data query
+        stmt = (
+            select(Card)
+            .join(Deck)
+            .where(*conditions)
+            .order_by(Card.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+
+        result = await self._session.execute(stmt)
+        cards = list(result.scalars().all())
+
+        return cards, total
+
+    async def list_all(
+        self,
+        user_id: UUID,
+        *,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[Card], int]:
+        """
+        Получить все карточки пользователя.
+
+        Args:
+            user_id: UUID пользователя
+            offset: Количество записей для пропуска
+            limit: Максимальное количество записей
+
+        Returns:
+            Кортеж (список карточек, общее количество)
+        """
+        from src.modules.decks.models import Deck
+
+        conditions = [
             Card.deleted_at.is_(None),
             Deck.owner_id == user_id,
         ]

@@ -14,20 +14,33 @@ from .models import CardStatus
 
 
 class CardCreate(BaseSchema):
-    """Схема для создания новой карточки."""
+    """Схема для создания новой карточки.
+
+    Поддерживает два формата:
+    1. Полный формат: {deck_id, template_id, fields: {Front, Back}}
+    2. Упрощённый формат: {deck_id, front, back}
+    """
 
     deck_id: UUID = Field(
         ...,
         description="ID колоды, в которую добавляется карточка",
     )
-    template_id: UUID = Field(
-        ...,
-        description="ID шаблона карточки",
+    template_id: UUID | None = Field(
+        default=None,
+        description="ID шаблона карточки (опционально, используется 'basic' по умолчанию)",
     )
-    fields: dict[str, Any] = Field(
-        ...,
+    fields: dict[str, Any] | None = Field(
+        default=None,
         description="Значения полей согласно шаблону",
         examples=[{"Front": "Вопрос", "Back": "Ответ"}],
+    )
+    front: str | None = Field(
+        default=None,
+        description="Передняя сторона карточки (упрощённый формат)",
+    )
+    back: str | None = Field(
+        default=None,
+        description="Задняя сторона карточки (упрощённый формат)",
     )
     tags: list[str] = Field(
         default_factory=list,
@@ -35,19 +48,27 @@ class CardCreate(BaseSchema):
         examples=[["программирование", "python"]],
     )
 
-    @field_validator("fields")
-    @classmethod
-    def validate_fields_not_empty(cls, v: dict[str, Any]) -> dict[str, Any]:
-        """Проверка, что словарь полей не пустой."""
-        if not v:
-            raise ValueError("Поля не могут быть пустыми")
-        return v
-
     @field_validator("tags")
     @classmethod
     def validate_tags(cls, v: list[str]) -> list[str]:
         """Валидация и нормализация тегов."""
         return [tag.strip() for tag in v if tag and tag.strip()]
+
+    def model_post_init(self, __context: Any) -> None:
+        """Нормализация данных после валидации."""
+        # Если fields не передан, но есть front/back - создаём fields
+        if self.fields is None:
+            if self.front is not None or self.back is not None:
+                object.__setattr__(self, "fields", {
+                    "Front": self.front or "",
+                    "Back": self.back or "",
+                })
+            else:
+                raise ValueError(
+                    "Необходимо указать либо 'fields', либо 'front'/'back'"
+                )
+        elif not self.fields:
+            raise ValueError("Поля не могут быть пустыми")
 
 
 class CardUpdate(BaseSchema):
@@ -101,6 +122,14 @@ class CardResponse(UUIDTimestampSchema):
         ...,
         description="Значения полей карточки",
     )
+    front: str = Field(
+        default="",
+        description="Передняя сторона карточки (из fields)",
+    )
+    back: str = Field(
+        default="",
+        description="Задняя сторона карточки (из fields)",
+    )
     status: CardStatus = Field(
         ...,
         description="Текущий статус карточки",
@@ -117,6 +146,23 @@ class CardResponse(UUIDTimestampSchema):
         default=None,
         description="ID заметки в Anki после синхронизации",
     )
+
+    @field_validator("front", "back", mode="before")
+    @classmethod
+    def extract_from_fields(cls, v: Any, info: Any) -> str:
+        """Extract front/back from fields if not provided."""
+        if v:
+            return v
+        # Will be set in model_validate
+        return ""
+
+    def model_post_init(self, __context: Any) -> None:
+        """Extract front/back from fields after validation."""
+        if self.fields:
+            if not self.front:
+                self.front = str(self.fields.get("Front", ""))
+            if not self.back:
+                self.back = str(self.fields.get("Back", ""))
 
 
 class GenerationInfoResponse(BaseSchema):
