@@ -7,10 +7,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
 from src.core.dependencies import CurrentUserId
+from src.modules.cards.embedding_service import EmbeddingService
 from src.modules.cards.models import CardStatus
 from src.modules.cards.schemas import (
     CardApproveRequest,
@@ -32,6 +34,46 @@ from src.modules.cards.service import (
     TemplateNotFoundError,
 )
 from src.shared.schemas import PaginatedResponse, PaginationParams, SuccessResponse
+
+
+class EmbeddingGenerateRequest(BaseModel):
+    """Запрос на генерацию эмбеддингов для карточек."""
+
+    deck_id: UUID | None = Field(default=None, description="ID колоды (опционально)")
+    card_ids: list[UUID] | None = Field(
+        default=None,
+        description="Список ID карточек (если не указан - все карточки колоды)",
+    )
+    batch_size: int = Field(default=32, ge=1, le=100, description="Размер батча")
+
+
+class EmbeddingGenerateResponse(BaseModel):
+    """Ответ на запрос генерации эмбеддингов."""
+
+    processed: int = Field(description="Количество обработанных карточек")
+    total: int = Field(description="Общее количество карточек")
+    message: str = Field(description="Сообщение о результате")
+
+
+class SemanticSearchRequest(BaseModel):
+    """Запрос на семантический поиск карточек."""
+
+    query: str = Field(min_length=1, max_length=1000, description="Поисковый запрос")
+    deck_id: UUID | None = Field(default=None, description="ID колоды для поиска")
+    limit: int = Field(default=5, ge=1, le=20, description="Максимум результатов")
+    threshold: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="Минимальный порог релевантности",
+    )
+
+
+class SemanticSearchResult(BaseModel):
+    """Результат семантического поиска."""
+
+    card: CardResponse
+    score: float = Field(description="Оценка релевантности (0-1)")
 
 logger = logging.getLogger(__name__)
 
@@ -629,4 +671,267 @@ async def restore_card(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Card not found: {e.card_id}",
+        ) from e
+
+
+# ==================== Embedding Endpoints ====================
+
+
+@router.post(
+    "/embeddings/generate",
+    response_model=EmbeddingGenerateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Сгенерировать эмбеддинги для карточек",
+    responses={
+        200: {"description": "Эмбеддинги успешно сгенерированы"},
+        401: {"description": "Пользователь не аутентифицирован"},
+        404: {"description": "Колода не найдена"},
+        503: {"description": "Сервис эмбеддингов недоступен"},
+    },
+)
+async def generate_embeddings(
+    request: EmbeddingGenerateRequest,
+    user_id: CurrentUserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CardService, Depends(get_card_service)],
+) -> EmbeddingGenerateResponse:
+    """Сгенерировать векторные эмбеддинги для карточек.
+
+    Создаёт эмбеддинги для семантического поиска. Можно указать:
+    - deck_id: Обработать все карточки колоды
+    - card_ids: Обработать конкретные карточки
+    - Ничего: Обработать все карточки пользователя (лимит 500)
+
+    Args:
+        request: Параметры генерации.
+        user_id: ID аутентифицированного пользователя.
+        db: Сессия БД.
+        service: Сервис карточек.
+
+    Returns:
+        Статистика обработки.
+    """
+    embedding_service = EmbeddingService(session=db)
+
+    # Получить карточки для обработки
+    if request.card_ids:
+        # Конкретные карточки
+        cards = []
+        for card_id in request.card_ids:
+            card = await service.get_by_id_for_user(card_id, user_id)
+            if card:
+                cards.append(card)
+    elif request.deck_id:
+        # Все карточки колоды
+        cards, _ = await service.list_by_deck(
+            deck_id=request.deck_id,
+            user_id=user_id,
+            limit=500,  # Limit for safety
+        )
+    else:
+        # Все карточки пользователя (с лимитом)
+        cards, _ = await service.list_all(
+            user_id=user_id,
+            limit=500,
+        )
+
+    if not cards:
+        return EmbeddingGenerateResponse(
+            processed=0,
+            total=0,
+            message="Нет карточек для обработки",
+        )
+
+    # Сгенерировать эмбеддинги
+    try:
+        processed = await embedding_service.generate_embeddings_batch(
+            cards=cards,
+            batch_size=request.batch_size,
+        )
+
+        return EmbeddingGenerateResponse(
+            processed=processed,
+            total=len(cards),
+            message=f"Успешно обработано {processed} из {len(cards)} карточек",
+        )
+    except Exception as e:
+        logger.exception("Error generating embeddings")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Ошибка сервиса эмбеддингов: {e}",
+        ) from e
+
+
+@router.post(
+    "/embeddings/search",
+    response_model=list[SemanticSearchResult],
+    status_code=status.HTTP_200_OK,
+    summary="Семантический поиск по карточкам",
+    responses={
+        200: {"description": "Результаты поиска"},
+        401: {"description": "Пользователь не аутентифицирован"},
+        503: {"description": "Сервис эмбеддингов недоступен"},
+    },
+)
+async def semantic_search(
+    request: SemanticSearchRequest,
+    user_id: CurrentUserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[SemanticSearchResult]:
+    """Семантический поиск по карточкам.
+
+    Использует векторные эмбеддинги для нахождения карточек,
+    семантически похожих на поисковый запрос.
+
+    Args:
+        request: Параметры поиска.
+        user_id: ID аутентифицированного пользователя.
+        db: Сессия БД.
+
+    Returns:
+        Список карточек с оценками релевантности.
+    """
+    embedding_service = EmbeddingService(session=db)
+
+    try:
+        results = await embedding_service.search_similar(
+            query=request.query,
+            deck_id=request.deck_id,
+            limit=request.limit,
+            threshold=request.threshold,
+        )
+
+        return [
+            SemanticSearchResult(
+                card=CardResponse.model_validate(card),
+                score=round(score, 4),
+            )
+            for card, score in results
+        ]
+    except Exception as e:
+        logger.exception("Error in semantic search")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Ошибка поиска: {e}",
+        ) from e
+
+
+@router.post(
+    "/{card_id}/embedding",
+    response_model=SuccessResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Сгенерировать эмбеддинг для одной карточки",
+    responses={
+        200: {"description": "Эмбеддинг успешно сгенерирован"},
+        401: {"description": "Пользователь не аутентифицирован"},
+        404: {"description": "Карточка не найдена"},
+        503: {"description": "Сервис эмбеддингов недоступен"},
+    },
+)
+async def generate_card_embedding(
+    card_id: Annotated[UUID, Path(description="ID карточки")],
+    user_id: CurrentUserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CardService, Depends(get_card_service)],
+) -> SuccessResponse:
+    """Сгенерировать эмбеддинг для одной карточки.
+
+    Args:
+        card_id: UUID карточки.
+        user_id: ID пользователя.
+        db: Сессия БД.
+        service: Сервис карточек.
+
+    Returns:
+        Подтверждение успеха.
+    """
+    card = await service.get_by_id_for_user(card_id, user_id)
+    if card is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card not found: {card_id}",
+        )
+
+    embedding_service = EmbeddingService(session=db)
+
+    try:
+        result = await embedding_service.generate_embedding(card)
+        if result:
+            return SuccessResponse(message="Эмбеддинг успешно создан")
+        else:
+            return SuccessResponse(
+                message="Не удалось создать эмбеддинг (карточка пустая)"
+            )
+    except Exception as e:
+        logger.exception("Error generating embedding for card %s", card_id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Ошибка создания эмбеддинга: {e}",
+        ) from e
+
+
+@router.get(
+    "/{card_id}/similar",
+    response_model=list[SemanticSearchResult],
+    status_code=status.HTTP_200_OK,
+    summary="Найти похожие карточки",
+    responses={
+        200: {"description": "Похожие карточки"},
+        401: {"description": "Пользователь не аутентифицирован"},
+        404: {"description": "Карточка не найдена"},
+        503: {"description": "Сервис эмбеддингов недоступен"},
+    },
+)
+async def get_similar_cards(
+    card_id: Annotated[UUID, Path(description="ID карточки")],
+    user_id: CurrentUserId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    service: Annotated[CardService, Depends(get_card_service)],
+    limit: Annotated[int, Query(ge=1, le=20, description="Максимум результатов")] = 5,
+    threshold: Annotated[
+        float,
+        Query(ge=0.0, le=1.0, description="Минимальный порог похожести"),
+    ] = 0.7,
+) -> list[SemanticSearchResult]:
+    """Найти карточки, похожие на указанную.
+
+    Args:
+        card_id: UUID исходной карточки.
+        user_id: ID пользователя.
+        db: Сессия БД.
+        service: Сервис карточек.
+        limit: Максимум результатов.
+        threshold: Минимальный порог похожести.
+
+    Returns:
+        Список похожих карточек.
+    """
+    card = await service.get_by_id_for_user(card_id, user_id)
+    if card is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Card not found: {card_id}",
+        )
+
+    embedding_service = EmbeddingService(session=db)
+
+    try:
+        results = await embedding_service.get_similar_cards(
+            card=card,
+            limit=limit,
+            threshold=threshold,
+        )
+
+        return [
+            SemanticSearchResult(
+                card=CardResponse.model_validate(similar_card),
+                score=round(score, 4),
+            )
+            for similar_card, score in results
+        ]
+    except Exception as e:
+        logger.exception("Error finding similar cards for %s", card_id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Ошибка поиска похожих: {e}",
         ) from e
