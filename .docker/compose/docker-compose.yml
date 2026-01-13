@@ -1,0 +1,127 @@
+# AnkiRAG Docker Compose - Local Development
+# Usage: docker compose -f .docker/compose/docker-compose.yml up -d
+
+services:
+  # =============================================================================
+  # PostgreSQL with pgvector Extension
+  # =============================================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ankirag-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5434}:5432"
+    environment:
+      - POSTGRES_USER=ankirag
+      - POSTGRES_PASSWORD=ankirag_secret
+      - POSTGRES_DB=ankirag
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ankirag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ankirag -d ankirag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =============================================================================
+  # Redis for Caching and Message Queue
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ankirag-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - ankirag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # =============================================================================
+  # Backend API Service
+  # =============================================================================
+  backend:
+    build:
+      context: ../..
+      dockerfile: .docker/services/backend/Dockerfile
+      target: dev
+    container_name: ankirag-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debugger port
+    volumes:
+      - ../../src:/app/src:rw
+    environment:
+      - DB_HOST=postgres
+      - DB_PASSWORD=ankirag_secret
+      - REDIS_HOST=redis
+      - SOP_LLM_API_BASE_URL=http://host.docker.internal:8001
+      - APP_DEBUG=true
+      - LOG_LEVEL=DEBUG
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ankirag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =============================================================================
+  # Frontend Development Server
+  # =============================================================================
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../.docker/services/frontend/Dockerfile
+      target: dev
+    container_name: ankirag-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../frontend/src:/app/src:rw
+      - ../../frontend/public:/app/public:rw
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - ankirag-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  ankirag-network:
+    driver: bridge
+    name: ankirag-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+    name: ankirag-postgres-data
+  redis_data:
+    name: ankirag-redis-data

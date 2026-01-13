@@ -1,0 +1,121 @@
+[project]
+name = "ankirag-backend"
+version = "1.0.0"
+description = "AnkiRAG - AI-powered Anki card generation service"
+requires-python = ">=3.12"
+dependencies = [
+    # Web framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.6",
+    "sse-starlette>=1.6.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.25",
+    "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.9",
+    "alembic>=1.13.0",
+    "pgvector>=0.2.4",
+    # Redis
+    "redis>=5.0.0",
+    # Auth & Security
+    "python-jose[cryptography]>=3.3.0",
+    "PyJWT>=2.8.0",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic[email]>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    # LLM & AI
+    "langchain>=0.1.0",
+    "langchain-core>=0.1.0",
+    "langgraph>=0.0.20",
+    "httpx>=0.27.0",
+    "openai>=1.10.0",
+    # Observability
+    "opentelemetry-api>=1.22.0",
+    "opentelemetry-sdk>=1.22.0",
+    "opentelemetry-exporter-otlp>=1.22.0",
+    "opentelemetry-instrumentation-fastapi>=0.43b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.43b0",
+    "opentelemetry-instrumentation-redis>=0.43b0",
+    "opentelemetry-instrumentation-httpx>=0.43b0",
+    "prometheus-client>=0.19.0",
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "jinja2>=3.1.0",
+    "loguru>=0.7.0",
+    "bcrypt>=4.0.0,<5.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.27.0",
+    "factory-boy>=3.3.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+# UP046/UP047 requires new PEP 695 generic syntax, but Pydantic, ABC classes
+# and decorator patterns may not fully support it yet
+ignore = ["UP046", "UP047"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+plugins = ["pydantic.mypy"]
+# Ignore missing imports for third-party libraries without stubs
+ignore_missing_imports = true
+# Enable key checks
+warn_return_any = false
+warn_unused_ignores = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "langgraph.*",
+    "langchain.*",
+    "langchain_core.*",
+    "langchain_openai.*",
+    "sse_starlette.*",
+    "prometheus_client.*",
+    "redis.*",
+    "loguru.*",
+]
+ignore_errors = true
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "migrations/*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.27.0",
+    "factory-boy>=3.3.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]

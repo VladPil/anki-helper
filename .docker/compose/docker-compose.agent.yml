@@ -1,0 +1,84 @@
+# AnkiRAG Local Agent
+# Desktop application with GUI support for local Anki synchronization
+# Usage: docker compose -f .docker/compose/docker-compose.agent.yml up -d
+
+services:
+  # =============================================================================
+  # Local Agent - PyQt6 Desktop Application
+  # =============================================================================
+  local-agent:
+    build:
+      context: ../../local-agent
+      dockerfile: ../.docker/services/local-agent/Dockerfile
+    container_name: ankirag-local-agent
+    restart: unless-stopped
+    environment:
+      - ANKIRAG_API_URL=${ANKIRAG_API_URL:-http://localhost:8000}
+      - ANKIRAG_API_KEY=${ANKIRAG_API_KEY}
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_QPA_PLATFORM=xcb
+      - QT_X11_NO_MITSHM=1
+      - ANKI_CONNECT_URL=http://host.docker.internal:8765
+      - ANKI_PROFILE=${ANKI_PROFILE:-User 1}
+      - LOG_LEVEL=INFO
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ankirag_agent_config:/home/appuser/.config/ankirag
+      - ${ANKI_DATA_PATH:-~/.local/share/Anki2}:/anki-data:ro
+    networks:
+      - ankirag-agent-network
+    security_opt:
+      - seccomp:unconfined
+    devices:
+      - /dev/dri:/dev/dri
+
+  # =============================================================================
+  # Local Agent (Development with hot reload)
+  # =============================================================================
+  local-agent-dev:
+    build:
+      context: ../../local-agent
+      dockerfile: ../.docker/services/local-agent/Dockerfile
+    container_name: ankirag-local-agent-dev
+    restart: unless-stopped
+    environment:
+      - ANKIRAG_API_URL=http://backend:8000
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_QPA_PLATFORM=xcb
+      - QT_X11_NO_MITSHM=1
+      - ANKI_CONNECT_URL=http://host.docker.internal:8765
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../../local-agent/src:/app/src:rw
+      - ankirag_agent_config_dev:/home/appuser/.config/ankirag
+      - ${ANKI_DATA_PATH:-~/.local/share/Anki2}:/anki-data:ro
+    networks:
+      - ankirag-network
+      - ankirag-agent-network
+    security_opt:
+      - seccomp:unconfined
+    devices:
+      - /dev/dri:/dev/dri
+    profiles:
+      - dev
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  ankirag-agent-network:
+    driver: bridge
+    name: ankirag-agent-network
+  ankirag-network:
+    external: true
+    name: ankirag-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  ankirag_agent_config:
+    name: ankirag-agent-config
+  ankirag_agent_config_dev:
+    name: ankirag-agent-config-dev
